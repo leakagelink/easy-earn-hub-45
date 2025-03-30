@@ -14,7 +14,7 @@ const Register = () => {
     <div className="flex flex-col min-h-screen bg-gray-50">
       <Header />
       
-      <main className="flex-grow container mx-auto px-4 py-8">
+      <main className="flex-grow container mx-auto px-4 py-8 mb-16 md:mb-0">
         <div className="max-w-md mx-auto">
           <AuthForm mode="register" selectedPlan={selectedPlan || undefined} />
         </div>
