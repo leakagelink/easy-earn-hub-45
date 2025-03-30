@@ -2,6 +2,10 @@
 import React from 'react';
 import Header from '@/components/Header';
 import PlanCard from '@/components/PlanCard';
+import TrustBadges from '@/components/TrustBadges';
+import Testimonials from '@/components/Testimonials';
+import SocialProof from '@/components/SocialProof';
+import FAQ from '@/components/FAQ';
 
 const Invest = () => {
   const plans = [
@@ -69,7 +73,7 @@ const Invest = () => {
       <Header />
       
       <main className="flex-grow container mx-auto px-4 py-8 mb-16 md:mb-0">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-4">
             Investment Plans
           </h1>
@@ -78,7 +82,9 @@ const Invest = () => {
           </p>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <TrustBadges />
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-8">
           {plans.map((plan) => (
             <PlanCard 
               key={plan.id}
@@ -92,6 +98,10 @@ const Invest = () => {
             />
           ))}
         </div>
+        
+        <SocialProof />
+        <Testimonials />
+        <FAQ />
       </main>
     </div>
   );

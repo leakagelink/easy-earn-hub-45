@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PlanCard from "@/components/PlanCard";
+import TrustBadges from "@/components/TrustBadges";
+import Testimonials from "@/components/Testimonials";
+import SocialProof from "@/components/SocialProof";
+import FAQ from "@/components/FAQ";
 
 const Index = () => {
   const plans = [
@@ -119,6 +123,12 @@ const Index = () => {
           </div>
         </section>
         
+        {/* Trust Badges */}
+        <TrustBadges />
+        
+        {/* Social Proof Section */}
+        <SocialProof />
+        
         {/* How It Works Section */}
         <section className="py-16 px-4 bg-gray-50">
           <div className="container mx-auto">
@@ -194,6 +204,9 @@ const Index = () => {
           </div>
         </section>
         
+        {/* Testimonials Section */}
+        <Testimonials />
+        
         {/* Features Section */}
         <section className="py-16 px-4 bg-gray-50">
           <div className="container mx-auto">
@@ -220,6 +233,9 @@ const Index = () => {
             </div>
           </div>
         </section>
+        
+        {/* FAQ Section */}
+        <FAQ />
         
         {/* CTA Section */}
         <section className="gradient-bg py-16 px-4">
