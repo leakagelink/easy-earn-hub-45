@@ -2,6 +2,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Link } from 'react-router-dom';
+import { Bitcoin } from 'lucide-react';
 
 interface PlanCardProps {
   id: number;
@@ -24,12 +25,16 @@ const PlanCard: React.FC<PlanCardProps> = ({
 }) => {
   return (
     <div 
-      className={`rounded-xl p-6 shadow-md ${
+      className={`rounded-xl p-6 shadow-md relative ${
         isPremium 
           ? 'premium-card premium-card-hover' 
           : 'card-gradient card-gradient-hover'
       }`}
     >
+      <div className="absolute -top-5 -right-5 bitcoin-icon-container">
+        <Bitcoin className="bitcoin-icon text-amber-500 bg-white rounded-full p-2" size={40} />
+      </div>
+      
       <div className="text-center mb-6">
         <h3 className={`text-xl font-bold ${isPremium ? 'text-white' : 'text-gray-800'}`}>
           {name}

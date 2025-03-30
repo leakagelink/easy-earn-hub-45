@@ -108,3 +108,28 @@
   transform: translateY(-5px);
   box-shadow: 0 20px 25px -5px rgba(139, 92, 246, 0.2), 0 10px 10px -5px rgba(139, 92, 246, 0.1);
 }
+
+/* Bitcoin icon animation */
+.bitcoin-icon {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  animation: spin 8s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.bitcoin-icon-container {
+  height: 40px;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  z-index: 10;
+}
