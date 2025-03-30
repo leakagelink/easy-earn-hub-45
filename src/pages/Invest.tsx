@@ -1,7 +1,6 @@
 
 import React from 'react';
 import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import PlanCard from '@/components/PlanCard';
 
 const Invest = () => {
@@ -94,8 +93,6 @@ const Invest = () => {
           ))}
         </div>
       </main>
-      
-      <Footer />
     </div>
   );
 };
