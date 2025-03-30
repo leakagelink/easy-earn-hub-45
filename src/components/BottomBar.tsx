@@ -1,46 +1,62 @@
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, PieChart, Plus, User, BarChart3 } from 'lucide-react';
+import { Home, PieChart, Plus, User, BarChart3, DollarSign } from 'lucide-react';
 
 const BottomBar = () => {
   const location = useLocation();
   
+  // Check if user is logged in - this would be replaced with actual auth check
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  
   const navItems = [
+    // Home will only show for logged out users
     { 
       name: 'Home', 
       path: '/', 
-      icon: Home 
+      icon: Home,
+      showWhen: 'logged-out'
+    },
+    // Invest will replace Home for logged in users
+    {
+      name: 'Invest',
+      path: '/',
+      icon: DollarSign,
+      showWhen: 'logged-in'
     },
     { 
       name: 'Dashboard', 
       path: '/dashboard', 
-      icon: PieChart 
+      icon: PieChart,
+      showWhen: 'logged-in'
     },
     { 
       name: 'Recharge', 
       path: '/recharge', 
-      icon: Plus 
+      icon: Plus,
+      showWhen: 'logged-in'
     },
     { 
       name: 'Withdraw', 
       path: '/withdraw', 
-      icon: BarChart3 
+      icon: BarChart3,
+      showWhen: 'logged-in'
     },
     { 
       name: 'Profile', 
       path: '/profile', 
-      icon: User 
+      icon: User,
+      showWhen: 'always'
     },
   ];
 
-  // Check if user is logged in - this would be replaced with actual auth check
-  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-  
-  // Only show Dashboard, Recharge, Withdraw if logged in
-  const filteredNavItems = isLoggedIn 
-    ? navItems 
-    : navItems.filter(item => item.path === '/' || item.path === '/profile');
+  // Filter navigation items based on login status
+  const filteredNavItems = navItems.filter(item => {
+    if (item.showWhen === 'always') return true;
+    if (isLoggedIn && item.showWhen === 'logged-in') return true;
+    if (!isLoggedIn && item.showWhen === 'logged-out') return true;
+    return false;
+  });
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg">
