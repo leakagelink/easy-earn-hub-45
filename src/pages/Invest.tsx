@@ -1,0 +1,103 @@
+
+import React from 'react';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import PlanCard from '@/components/PlanCard';
+
+const Invest = () => {
+  const plans = [
+    {
+      id: 1,
+      name: "Plan 1",
+      price: 500,
+      dailyProfit: 120,
+      validityDays: 365,
+      totalIncome: 43800,
+    },
+    {
+      id: 2,
+      name: "Plan 2",
+      price: 1000,
+      dailyProfit: 244,
+      validityDays: 365,
+      totalIncome: 89060,
+    },
+    {
+      id: 3,
+      name: "Plan 3",
+      price: 2000,
+      dailyProfit: 504,
+      validityDays: 365,
+      totalIncome: 183960,
+    },
+    {
+      id: 4,
+      name: "Plan 4",
+      price: 3000,
+      dailyProfit: 765,
+      validityDays: 365,
+      totalIncome: 279225,
+      isPremium: true,
+    },
+    {
+      id: 5,
+      name: "Plan 5",
+      price: 5000,
+      dailyProfit: 1288,
+      validityDays: 365,
+      totalIncome: 470120,
+    },
+    {
+      id: 6,
+      name: "Plan 6",
+      price: 6000,
+      dailyProfit: 1622,
+      validityDays: 365,
+      totalIncome: 592030,
+    },
+    {
+      id: 7,
+      name: "Plan 7",
+      price: 7000,
+      dailyProfit: 2100,
+      validityDays: 365,
+      totalIncome: 766500,
+    }
+  ];
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Header />
+      
+      <main className="flex-grow container mx-auto px-4 py-8 mb-16 md:mb-0">
+        <div className="text-center mb-12">
+          <h1 className="text-3xl font-bold text-gray-800 mb-4">
+            Investment Plans
+          </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Choose the plan that fits your investment goals and start earning daily.
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {plans.map((plan) => (
+            <PlanCard 
+              key={plan.id}
+              id={plan.id}
+              name={plan.name}
+              price={plan.price}
+              dailyProfit={plan.dailyProfit}
+              validityDays={plan.validityDays}
+              totalIncome={plan.totalIncome}
+              isPremium={plan.isPremium}
+            />
+          ))}
+        </div>
+      </main>
+      
+      <Footer />
+    </div>
+  );
+};
+
+export default Invest;

@@ -20,7 +20,7 @@ const BottomBar = () => {
     // Invest will replace Home for logged in users
     {
       name: 'Invest',
-      path: '/',
+      path: '/invest',
       icon: DollarSign,
       showWhen: 'logged-in'
     },
