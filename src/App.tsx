@@ -19,6 +19,16 @@ import NotFound from "./pages/NotFound";
 import Invest from "./pages/Invest";
 import Admin from "./pages/Admin";
 
+// Admin pages
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminInvestments from "./pages/admin/AdminInvestments";
+import AdminTransactions from "./pages/admin/AdminTransactions";
+import AdminWithdrawals from "./pages/admin/AdminWithdrawals";
+import AdminPlans from "./pages/admin/AdminPlans";
+import AdminSecurity from "./pages/admin/AdminSecurity";
+import AdminSettings from "./pages/admin/AdminSettings";
+import AdminReports from "./pages/admin/AdminReports";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -37,7 +47,18 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/invest" element={<Invest />} />
+          
+          {/* Admin routes */}
           <Route path="/admin" element={<Admin />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/investments" element={<AdminInvestments />} />
+          <Route path="/admin/transactions" element={<AdminTransactions />} />
+          <Route path="/admin/withdrawals" element={<AdminWithdrawals />} />
+          <Route path="/admin/plans" element={<AdminPlans />} />
+          <Route path="/admin/security" element={<AdminSecurity />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin/reports" element={<AdminReports />} />
+          
           <Route path="*" element={<NotFound />} />
         </Routes>
         <BottomBar />

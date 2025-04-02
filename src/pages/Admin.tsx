@@ -2,8 +2,11 @@
 import React from 'react';
 import AdminLayout from '../components/AdminLayout';
 import AdminDashboard from '../components/AdminDashboard';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
 const Admin = () => {
+  const navigate = useNavigate();
   // Simple auth check - in a real app, use proper auth
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
 
@@ -14,7 +17,7 @@ const Admin = () => {
           <h1 className="text-2xl font-bold text-center text-gray-900">Admin Access Required</h1>
           <p className="text-center text-gray-600">You need admin privileges to access this page.</p>
           <div className="flex justify-center">
-            <button 
+            <Button 
               onClick={() => {
                 // For demo only - this would be a proper login in production
                 localStorage.setItem('isAdmin', 'true');
@@ -23,7 +26,7 @@ const Admin = () => {
               className="px-4 py-2 text-white bg-easyearn-purple rounded hover:bg-purple-700"
             >
               Login as Admin
-            </button>
+            </Button>
           </div>
         </div>
       </div>
