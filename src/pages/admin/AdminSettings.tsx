@@ -1,14 +1,53 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/components/ui/use-toast';
+import { QrCode, Wallet } from 'lucide-react';
 
 const AdminSettings = () => {
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
+  const { toast } = useToast();
+  
+  const [upiId, setUpiId] = useState(localStorage.getItem('paymentUpiId') || 'easyearn@upi');
+  const [qrCodeUrl, setQrCodeUrl] = useState(localStorage.getItem('paymentQrCode') || 
+    "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48cGF0aCBkPSJNMjQuNCAyNC40aDIxLjF2MjEuMWgtMjEuMXptMjEuMSAwaDE3Ljh2NC40aC0xNy44em0tMjEuMSAyMS4xaDIxLjF2MjEuMWgtMjEuMXptMjEuMSAwaDE3Ljh2NC40aC0xNy44em0tMjEuMSAyMS4xaDI2LjZ2MjEuMWgtMjYuNnptNDguOC01My4zaDE3Ljh2MjYuNmgtMTcuOHptMjIuMiAyMi4yaDYyLjJ2MjIuMmgtMjIuMnptLTEwNi43IDI2LjZoMTMuM3YxNy44aC0xNy44em0xNy44IDB2MjIuMmgtMjIuMnYtMjIuMnptLTIyLjIgMjIuMmgyNi42djI2LjZoLTI2LjZ6bTIyLjIgMTcuOGgyMi4ydjI2LjZoLTE3Ljh6bTE3LjggMGg0OC44djE3LjhoLTQ4Ljh6bTQ4LjggMGgyMi4ydjIyLjJoLTIyLjJ6bS02Ni43IDI2LjZoMTcuOHYzMS4xaC0xNy44em0tMjYuNi0yMi4yaDI2LjZ2MjYuNmgtMjYuNnptNjIuMiAyNi42aDI2LjZ2MjYuNmgtMjYuNnptMjYuNi0yMi4yaDIyLjJ2MTcuOGgtMjIuMnptMjYuNi0yMi4yaDIyLjJ2NDQuNGgtMjIuMnptLTEzMy4zLTcxLjFoMTcuOHYxNy44aC0xNy44em0yNi42IDBoMTMuM3YxNy44aC0xMy4zem0zNS41IDQ0LjRoMjIuMnYxNy44aC0yMi4yem0tMzUuNS0xNy44aDIyLjJ2MjYuNmgtMjIuMnptMjYuNiAyNi42aDE3Ljh2MjYuNmgtMTcuOHptLTI2LjYgMjYuNmgxNy44djI2LjZoLTE3Ljh6bTY2LjcgMGgxNy44djIyLjJoLTE3Ljh6bTIyLjIgMGgyMi4ydjE3LjhoLTIyLjJ6Ii8+PC9zdmc+");
+  
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  
+  const handleUpiIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUpiId(e.target.value);
+  };
+  
+  const handleQrCodeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setQrCodeUrl(event.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  const triggerFileUpload = () => {
+    fileInputRef.current?.click();
+  };
+  
+  const savePaymentSettings = () => {
+    localStorage.setItem('paymentUpiId', upiId);
+    localStorage.setItem('paymentQrCode', qrCodeUrl);
+    
+    toast({
+      title: "Payment settings updated",
+      description: "QR code and UPI ID have been saved successfully.",
+    });
+  };
 
   if (!isAdmin) {
     window.location.href = '/admin';
@@ -24,6 +63,7 @@ const AdminSettings = () => {
           <TabsList>
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="payment">Payment</TabsTrigger>
+            <TabsTrigger value="payment-qr">QR & UPI</TabsTrigger>
             <TabsTrigger value="notification">Notification</TabsTrigger>
           </TabsList>
           
@@ -100,6 +140,102 @@ const AdminSettings = () => {
                   </Button>
                 </div>
               </form>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="payment-qr" className="space-y-4 mt-4">
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <QrCode className="h-5 w-5" />
+                QR Code & UPI Settings
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="upi-id">UPI ID</Label>
+                    <Input 
+                      id="upi-id" 
+                      value={upiId} 
+                      onChange={handleUpiIdChange}
+                      placeholder="username@upi"
+                    />
+                    <p className="text-sm text-gray-500">
+                      This UPI ID will be shown to users during payment
+                    </p>
+                  </div>
+                  
+                  <div className="pt-2">
+                    <Button 
+                      onClick={savePaymentSettings}
+                      className="bg-easyearn-purple hover:bg-easyearn-darkpurple"
+                    >
+                      Save Payment Settings
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Payment QR Code</Label>
+                    <div className="border rounded-md p-4 bg-white flex items-center justify-center">
+                      {qrCodeUrl ? (
+                        <img 
+                          src={qrCodeUrl} 
+                          alt="Payment QR Code" 
+                          className="w-48 h-48 object-contain"
+                        />
+                      ) : (
+                        <div className="w-48 h-48 flex items-center justify-center bg-gray-100 rounded-md">
+                          <p className="text-gray-500">No QR code available</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleQrCodeUpload}
+                      accept="image/*"
+                      className="hidden"
+                    />
+                    
+                    <Button 
+                      onClick={triggerFileUpload}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <QrCode className="mr-2 h-4 w-4" />
+                      Upload New QR Code
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card>
+            
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <Wallet className="h-5 w-5" />
+                Payment Preview
+              </h2>
+              <p className="text-sm text-gray-500 mb-4">
+                This is how payment information will appear to users
+              </p>
+              
+              <div className="border rounded-md p-4 bg-gray-50">
+                <div className="flex flex-col items-center mb-6">
+                  <div className="bg-white p-4 rounded-md border mb-4">
+                    <img src={qrCodeUrl} alt="Payment QR Code" className="w-48 h-48" />
+                  </div>
+                  <p className="text-center text-sm text-gray-500">
+                    Scan this QR code with any UPI app to make payment
+                  </p>
+                </div>
+                
+                <div className="flex items-center justify-between p-3 bg-gray-100 rounded-md">
+                  <span className="text-gray-700">UPI ID:</span>
+                  <span className="font-medium">{upiId}</span>
+                </div>
+              </div>
             </Card>
           </TabsContent>
           
