@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import { Button } from "@/components/ui/button";
@@ -138,7 +137,7 @@ const AdminTransactions = () => {
                         <TableCell>
                           <Badge 
                             variant={
-                              request.status === 'approved' ? 'success' :
+                              request.status === 'approved' ? 'default' :
                               request.status === 'rejected' ? 'destructive' : 'outline'
                             }
                             className={
