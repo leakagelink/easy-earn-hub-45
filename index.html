@@ -17,13 +17,13 @@
     <meta name="twitter:site" content="@easyearnhub" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
     
-    <!-- Prevent external scripts from loading -->
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';">
+    <!-- Strict Content Security Policy to block all external scripts -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline';">
   </head>
 
   <body>
     <div id="root"></div>
-    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
+    <!-- Removed the GPT Engineer script completely -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
