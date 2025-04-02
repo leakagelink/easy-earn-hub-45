@@ -17,13 +17,48 @@
     <meta name="twitter:site" content="@easyearnhub" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
     
-    <!-- Strict Content Security Policy to block all external scripts -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline';">
+    <!-- Super strict Content Security Policy to block all external scripts and resources -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-src 'none'; object-src 'none';">
+    
+    <!-- Prevent any frames from displaying on top of our content -->
+    <style>
+      /* Hide any potential overlay elements */
+      [id*="lovable"], [class*="lovable"], [id*="gpt"], [class*="gpt"], 
+      [id*="edit"], [class*="edit"], [id*="overlay"], [class*="overlay"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+    </style>
   </head>
 
   <body>
     <div id="root"></div>
-    <!-- Removed the GPT Engineer script completely -->
+    <!-- No external scripts allowed -->
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Additional script to remove any dynamically added elements -->
+    <script>
+      // Remove any popup elements that might be added dynamically
+      function removeUnwantedElements() {
+        const selectors = [
+          '[id*="lovable"]', '[class*="lovable"]', 
+          '[id*="gpt"]', '[class*="gpt"]',
+          '[id*="edit"]', '[class*="edit"]',
+          '[id*="overlay"]', '[class*="overlay"]'
+        ];
+        
+        selectors.forEach(selector => {
+          document.querySelectorAll(selector).forEach(el => {
+            el.remove();
+          });
+        });
+      }
+      
+      // Run on load and periodically
+      window.addEventListener('DOMContentLoaded', removeUnwantedElements);
+      setInterval(removeUnwantedElements, 1000);
+    </script>
   </body>
 </html>
