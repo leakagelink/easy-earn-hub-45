@@ -20,9 +20,9 @@ const Recharge = () => {
   const [transactionId, setTransactionId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Mock QR code image (in a real app, this would be dynamically generated)
-  const qrCodeImage = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48cGF0aCBkPSJNMjQuNCAyNC40aDIxLjF2MjEuMWgtMjEuMXptMjEuMSAwaDE3Ljh2NC40aC0xNy44em0tMjEuMSAyMS4xaDIxLjF2MjEuMWgtMjEuMXptMjEuMSAwaDE3Ljh2NC40aC0xNy44em0tMjEuMSAyMS4xaDI2LjZ2MjEuMWgtMjYuNnptNDguOC01My4zaDE3Ljh2MjYuNmgtMTcuOHptMjIuMiAyMi4yaDYyLjJ2MTcuOGgtNjIuMnptLTcxLjEgMTcuOGgyMi4ydjI2LjZoLTIyLjJ6bTg4LjktMTcuOGgyNi42djE3LjhoLTI2LjZ6bTIyLjIgMTcuOGgyMi4ydjIyLjJoLTIyLjJ6bTQuNCAyMi4yaDIyLjJ2MjIuMmgtMjIuMnptLTEwNi43IDI2LjZoMTMuM3YxNy44aC0xMy4zem0xNy44IDB2MjIuMmgtMjIuMnYtMjIuMnptLTIyLjIgMjIuMmgyNi42djI2LjZoLTI2LjZ6bTI2LjYgMGgxNy44djI2LjZoLTE3Ljh6bTE3LjggMGg0OC44djE3LjhoLTQ4Ljh6bTQ4LjggMGgyMi4ydjIyLjJoLTIyLjJ6bS02Ni43IDI2LjZoMTcuOHYzMS4xaC0xNy44em0tMjYuNi0yMi4yaDI2LjZ2MjYuNmgtMjYuNnptNjIuMiAyNi42aDI2LjZ2MjYuNmgtMjYuNnptMjYuNi0yMi4yaDIyLjJ2MTcuOGgtMjIuMnptMjYuNi0yMi4yaDIyLjJ2NDQuNGgtMjIuMnptLTEzMy4zLTcxLjFoMTcuOHYxNy44aC0xNy44em0yNi42IDBoMTMuM3YxNy44aC0xMy4zem0zNS41IDQ0LjRoMjIuMnYxNy44aC0yMi4yem0tMzUuNS0xNy44aDIyLjJ2MjYuNmgtMjIuMnptMjYuNiAyNi42aDE3Ljh2MjYuNmgtMTcuOHptLTI2LjYgMjYuNmgxNy44djI2LjZoLTE3Ljh6bTY2LjcgMGgxNy44djIyLjJoLTE3Ljh6bTIyLjIgMGgyMi4ydjE3LjhoLTIyLjJ6Ii8+PC9zdmc+";
-  const upiId = "easyearn@upi";
+  // Retrieve QR code image and UPI ID from localStorage (set by admin)
+  const qrCodeImage = localStorage.getItem('adminQrCode') || "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48cGF0aCBkPSJNMjQuNCAyNC40aDIxLjF2MjEuMWgtMjEuMXptMjEuMSAwaDE3Ljh2NC40aC0xNy44em0tMjEuMSAyMS4xaDIxLjF2MjEuMWgtMjEuMXptMjEuMSAwaDE3Ljh2NC40aC0xNy44em0tMjEuMSAyMS4xaDI2LjZ2MjEuMWgtMjYuNnptNDguOC01My4zaDE3Ljh2MjYuNmgtMTcuOHptMjIuMiAyMi4yaDYyLjJ2MTcuOGgtNjIuMnptLTcxLjEgMTcuOGgyMi4ydjI2LjZoLTIyLjJ6bTg4LjktMTcuOGgyNi42djE3LjhoLTI2LjZ6bTIyLjIgMTcuOGgyMi4ydjIyLjJoLTIyLjJ6bTQuNCAyMi4yaDIyLjJ2MjIuMmgtMjIuMnptLTEwNi43IDI2LjZoMTMuM3YxNy44aC0xMy4zem0xNy44IDB2MjIuMmgtMjIuMnYtMjIuMnptLTIyLjIgMjIuMmgyNi42djI2LjZoLTI2LjZ6bTI2LjYgMGgxNy44djI2LjZoLTE3Ljh6bTE3LjggMGg0OC44djE3LjhoLTQ4Ljh6bTQ4LjggMGgyMi4ydjIyLjJoLTIyLjJ6bS02Ni43IDI2LjZoMTcuOHYzMS4xaC0xNy44em0tMjYuNi0yMi4yaDI2LjZ2MjYuNmgtMjYuNnptNjIuMiAyNi42aDI2LjZ2MjYuNmgtMjYuNnptMjYuNi0yMi4yaDIyLjJ2MTcuOGgtMjIuMnptMjYuNi0yMi4yaDIyLjJ2NDQuNGgtMjIuMnptLTEzMy4zLTcxLjFoMTcuOHYxNy44aC0xNy44em0yNi42IDBoMTMuM3YxNy44aC0xMy4zem0zNS41IDQ0LjRoMjIuMnYxNy44aC0yMi4yem0tMzUuNS0xNy44aDIyLjJ2MjYuNmgtMjIuMnptMjYuNiAyNi42aDE3Ljh2MjYuNmgtMTcuOHptLTI2LjYgMjYuNmgxNy44djI2LjZoLTE3Ljh6bTY2LjcgMGgxNy44djIyLjJoLTE3Ljh6bTIyLjIgMGgyMi4ydjE3LjhoLTIyLjJ6Ii8+PC9zdmc+";
+  const upiId = localStorage.getItem('adminUpiId') || "easyearn@upi";
   
   // Common recharge amounts
   const quickAmounts = [500, 1000, 2000, 5000, 7000];
@@ -60,7 +60,26 @@ const Recharge = () => {
     
     setIsSubmitting(true);
     
-    // Simulate API call
+    // Get the current user for the recharge request
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{"name": "User", "id": "1"}');
+    const userId = currentUser.id;
+    const userName = currentUser.name;
+    
+    // Create a new recharge request
+    const newRechargeRequest = {
+      id: Date.now().toString(),
+      userId,
+      userName,
+      amount: Number(amount),
+      transactionId: transactionId || 'UPI Payment',
+      date: new Date().toISOString(),
+      status: 'pending',
+    };
+    
+    // Store the recharge request in localStorage
+    const existingRequests = JSON.parse(localStorage.getItem('rechargeRequests') || '[]');
+    localStorage.setItem('rechargeRequests', JSON.stringify([...existingRequests, newRechargeRequest]));
+    
     setTimeout(() => {
       toast({
         title: "Recharge request submitted",
@@ -141,7 +160,7 @@ const Recharge = () => {
                   </RadioGroup>
                 </div>
                 
-                {paymentMethod === 'transaction' && (
+                {(paymentMethod === 'transaction' || paymentMethod === 'upi') && (
                   <div className="space-y-2">
                     <Label htmlFor="transactionId">Transaction ID / Reference</Label>
                     <Input
@@ -149,7 +168,11 @@ const Recharge = () => {
                       value={transactionId}
                       onChange={(e) => setTransactionId(e.target.value)}
                       placeholder="Enter transaction ID or reference"
+                      required
                     />
+                    <p className="text-sm text-gray-500">
+                      * Please enter the transaction ID after completing the payment
+                    </p>
                   </div>
                 )}
                 
@@ -203,7 +226,7 @@ const Recharge = () => {
                   <ul className="text-sm text-yellow-700 space-y-1">
                     <li>• Make sure to enter the correct amount before making payment</li>
                     <li>• Save the transaction ID after payment</li>
-                    <li>• If payment is made, submit the transaction ID above</li>
+                    <li>• Enter the transaction ID to complete your recharge request</li>
                     <li>• Your account will be credited after verification</li>
                   </ul>
                 </div>
@@ -212,24 +235,41 @@ const Recharge = () => {
               <div className="mt-6">
                 <h3 className="font-medium mb-2">Recent Recharges</h3>
                 <div className="space-y-2">
-                  {[
-                    { date: '2023-06-15', amount: 1000, status: 'success' },
-                    { date: '2023-06-01', amount: 2000, status: 'success' },
-                  ].map((recharge, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                      <div>
-                        <p className="text-sm font-medium">{new Date(recharge.date).toLocaleDateString()}</p>
-                        <p className="text-xs text-gray-500">₹{recharge.amount}</p>
-                      </div>
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        recharge.status === 'success' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {recharge.status === 'success' ? 'Successful' : 'Pending'}
-                      </span>
-                    </div>
-                  ))}
+                  {/* Get user's recent recharges from localStorage */}
+                  {(() => {
+                    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{"id": "1"}');
+                    const allRequests = JSON.parse(localStorage.getItem('rechargeRequests') || '[]');
+                    const userRecharges = allRequests
+                      .filter((req: any) => req.userId === currentUser.id)
+                      .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                      .slice(0, 3);
+                    
+                    return userRecharges.length > 0 ? (
+                      userRecharges.map((recharge: any, index: number) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                          <div>
+                            <p className="text-sm font-medium">{new Date(recharge.date).toLocaleDateString()}</p>
+                            <p className="text-xs text-gray-500">₹{recharge.amount}</p>
+                          </div>
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            recharge.status === 'approved' 
+                              ? 'bg-green-100 text-green-800' 
+                              : recharge.status === 'rejected'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {recharge.status === 'approved' 
+                              ? 'Successful' 
+                              : recharge.status === 'rejected'
+                                ? 'Rejected'
+                                : 'Pending'}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-500">No recent recharges found</p>
+                    );
+                  })()}
                 </div>
               </div>
             </CardContent>
