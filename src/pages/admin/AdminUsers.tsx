@@ -1,12 +1,20 @@
 
 import React from 'react';
 import AdminLayout from '../../components/AdminLayout';
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
 const AdminUsers = () => {
+  const navigate = useNavigate();
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
 
+  useEffect(() => {
+    if (!isAdmin) {
+      navigate('/admin');
+    }
+  }, [isAdmin, navigate]);
+
   if (!isAdmin) {
-    window.location.href = '/admin';
     return null;
   }
 

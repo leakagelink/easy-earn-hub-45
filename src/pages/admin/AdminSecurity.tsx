@@ -4,12 +4,20 @@ import AdminLayout from '../../components/AdminLayout';
 import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
 const AdminSecurity = () => {
+  const navigate = useNavigate();
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
 
+  useEffect(() => {
+    if (!isAdmin) {
+      navigate('/admin');
+    }
+  }, [isAdmin, navigate]);
+
   if (!isAdmin) {
-    window.location.href = '/admin';
     return null;
   }
 
@@ -86,7 +94,7 @@ const AdminSecurity = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   <tr>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Admin User</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">admin@easyearn.com</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">admin@easyearn.us</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Super Admin</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date().toLocaleString()}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
