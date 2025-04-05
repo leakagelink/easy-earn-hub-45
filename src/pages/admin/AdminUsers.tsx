@@ -1,8 +1,7 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
 
 const AdminUsers = () => {
   const navigate = useNavigate();
