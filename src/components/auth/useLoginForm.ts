@@ -82,7 +82,7 @@ export function useLoginForm() {
     });
     
     setIsLoading(false);
-    navigate('/invest'); // Changed from '/dashboard' to '/invest'
+    navigate('/invest'); // We're already redirecting to '/invest' here
   };
   
   return {

@@ -1,13 +1,26 @@
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import Header from '@/components/Header';
 import PlanCard from '@/components/PlanCard';
 import TrustBadges from '@/components/TrustBadges';
 import Testimonials from '@/components/Testimonials';
 import SocialProof from '@/components/SocialProof';
 import FAQ from '@/components/FAQ';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const Invest = () => {
+  const isMobile = useIsMobile();
+  const plansSectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Scroll to the plans section on mobile devices after component mount
+    if (isMobile && plansSectionRef.current) {
+      setTimeout(() => {
+        plansSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  }, [isMobile]);
+
   const plans = [
     {
       id: 1,
@@ -84,7 +97,7 @@ const Invest = () => {
         
         <TrustBadges />
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-8">
+        <div ref={plansSectionRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-8">
           {plans.map((plan) => (
             <PlanCard 
               key={plan.id}
