@@ -1,10 +1,9 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { Mail, Phone } from 'lucide-react';
+import { Phone, Mail } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PasswordField from './PasswordField';
 import RememberMeCheckbox from './RememberMeCheckbox';
@@ -20,7 +19,7 @@ const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
+  const [loginMethod, setLoginMethod] = useState<'phone' | 'email'>('phone');
   
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,28 +102,34 @@ const LoginForm = () => {
       </div>
       
       <div className="p-8">
-        <Tabs defaultValue="email" className="mb-6" onValueChange={(value) => setLoginMethod(value as 'email' | 'phone')}>
+        <Tabs defaultValue="phone" className="mb-6" onValueChange={(value) => setLoginMethod(value as 'phone' | 'email')}>
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="email">Email</TabsTrigger>
-            <TabsTrigger value="phone">Phone</TabsTrigger>
+            <TabsTrigger value="phone" className="flex items-center justify-center gap-2">
+              <Phone className="h-4 w-4" />
+              <span>Phone</span>
+            </TabsTrigger>
+            <TabsTrigger value="email" className="flex items-center justify-center gap-2">
+              <Mail className="h-4 w-4" />
+              <span>Email</span>
+            </TabsTrigger>
           </TabsList>
-          <TabsContent value="email">
+          <TabsContent value="phone">
             <form onSubmit={handleLogin} className="space-y-6">
-              <EmailInput email={email} setEmail={setEmail} />
+              <PhoneInput phone={phone} setPhone={setPhone} />
               
               <PasswordField 
                 password={password}
                 setPassword={setPassword}
                 showPassword={showPassword}
                 togglePasswordVisibility={togglePasswordVisibility}
-                id="password-email"
+                id="password-phone"
               />
               
               <div className="flex items-center justify-between">
                 <RememberMeCheckbox 
                   rememberMe={rememberMe} 
                   setRememberMe={setRememberMe}
-                  id="remember-me-email"
+                  id="remember-me-phone"
                 />
                 <a 
                   href="#" 
@@ -151,23 +156,23 @@ const LoginForm = () => {
               </Button>
             </form>
           </TabsContent>
-          <TabsContent value="phone">
+          <TabsContent value="email">
             <form onSubmit={handleLogin} className="space-y-6">
-              <PhoneInput phone={phone} setPhone={setPhone} />
+              <EmailInput email={email} setEmail={setEmail} />
               
               <PasswordField 
                 password={password}
                 setPassword={setPassword}
                 showPassword={showPassword}
                 togglePasswordVisibility={togglePasswordVisibility}
-                id="password-phone"
+                id="password-email"
               />
               
               <div className="flex items-center justify-between">
                 <RememberMeCheckbox 
                   rememberMe={rememberMe} 
                   setRememberMe={setRememberMe}
-                  id="remember-me-phone"
+                  id="remember-me-email"
                 />
                 <a 
                   href="#" 
