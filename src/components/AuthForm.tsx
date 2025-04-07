@@ -1,11 +1,15 @@
 
 import React, { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from 'react-router-dom';
-import { Phone } from 'lucide-react';
+import { useToast } from "@/components/ui/use-toast";
+import LoginOptions from './auth/LoginOptions';
+import PhoneInput from './auth/PhoneInput';
+import EmailInput from './auth/EmailInput';
+import PasswordInput from './auth/PasswordInput';
+import ReferralInput from './auth/ReferralInput';
+import SubmitButton from './auth/SubmitButton';
+import AuthFooter from './auth/AuthFooter';
+import { useAuthFormValidator } from './auth/AuthFormValidator';
 
 interface AuthFormProps {
   mode: 'login' | 'register';
@@ -23,66 +27,21 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   
   const { toast } = useToast();
   const navigate = useNavigate();
-  
-  const validateForm = () => {
-    if (mode === 'login') {
-      if (loginMethod === 'email' && !email) {
-        toast({
-          title: "Email is required",
-          variant: "destructive",
-        });
-        return false;
-      }
-      
-      if (loginMethod === 'phone' && !phone) {
-        toast({
-          title: "Phone number is required",
-          variant: "destructive",
-        });
-        return false;
-      }
-    } else {
-      // Register mode
-      if (!phone) {
-        toast({
-          title: "Phone number is required",
-          variant: "destructive",
-        });
-        return false;
-      }
-      
-      if (!email) {
-        toast({
-          title: "Email is required",
-          variant: "destructive",
-        });
-        return false;
-      }
-    }
-    
-    if (!password) {
-      toast({
-        title: "Password is required",
-        variant: "destructive",
-      });
-      return false;
-    }
-    
-    if (mode === 'register' && password !== confirmPassword) {
-      toast({
-        title: "Passwords do not match",
-        variant: "destructive",
-      });
-      return false;
-    }
-    
-    return true;
-  };
+  const { validateForm } = useAuthFormValidator();
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    const isValid = validateForm({
+      mode,
+      loginMethod,
+      email,
+      phone,
+      password,
+      confirmPassword
+    });
+    
+    if (!isValid) return;
     
     setIsLoading(true);
     
@@ -145,149 +104,37 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       <form onSubmit={handleSubmit} className="space-y-4">
         {mode === 'login' && (
-          <div className="flex justify-center space-x-4 mb-4">
-            <Button
-              type="button"
-              variant={loginMethod === 'email' ? 'default' : 'outline'}
-              className={loginMethod === 'email' ? 'bg-easyearn-purple' : ''}
-              onClick={() => setLoginMethod('email')}
-            >
-              Email
-            </Button>
-            <Button
-              type="button"
-              variant={loginMethod === 'phone' ? 'default' : 'outline'}
-              className={loginMethod === 'phone' ? 'bg-easyearn-purple' : ''}
-              onClick={() => setLoginMethod('phone')}
-            >
-              Phone
-            </Button>
-          </div>
+          <LoginOptions loginMethod={loginMethod} setLoginMethod={setLoginMethod} />
         )}
         
-        {mode === 'register' && (
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number</Label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Phone className="h-5 w-5 text-gray-400" />
-              </div>
-              <Input 
-                id="phone" 
-                type="tel" 
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="Enter your phone number"
-                className="pl-10"
-              />
-            </div>
-          </div>
-        )}
+        {mode === 'register' && <PhoneInput phone={phone} setPhone={setPhone} />}
         
         {(mode === 'register' || (mode === 'login' && loginMethod === 'email')) && (
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input 
-              id="email" 
-              type="email" 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-            />
-          </div>
+          <EmailInput email={email} setEmail={setEmail} />
         )}
         
         {(mode === 'login' && loginMethod === 'phone') && (
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number</Label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Phone className="h-5 w-5 text-gray-400" />
-              </div>
-              <Input 
-                id="phone" 
-                type="tel" 
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="Enter your phone number"
-                className="pl-10"
-              />
-            </div>
-          </div>
+          <PhoneInput phone={phone} setPhone={setPhone} />
         )}
         
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <Input 
-            id="password" 
-            type="password" 
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your password"
-          />
-        </div>
+        <PasswordInput password={password} setPassword={setPassword} />
         
         {mode === 'register' && (
           <>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input 
-                id="confirmPassword" 
-                type="password" 
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm your password"
-              />
-            </div>
+            <PasswordInput 
+              password={confirmPassword} 
+              setPassword={setConfirmPassword}
+              id="confirmPassword"
+              label="Confirm Password"
+            />
             
-            <div className="space-y-2">
-              <Label htmlFor="referralCode">Referral Code (Optional)</Label>
-              <Input 
-                id="referralCode" 
-                type="text" 
-                value={referralCode}
-                onChange={(e) => setReferralCode(e.target.value)}
-                placeholder="Enter referral code"
-              />
-            </div>
+            <ReferralInput referralCode={referralCode} setReferralCode={setReferralCode} />
           </>
         )}
         
-        <Button 
-          type="submit" 
-          className="w-full bg-easyearn-purple hover:bg-easyearn-darkpurple"
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <span className="flex items-center">
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Processing...
-            </span>
-          ) : (
-            mode === 'login' ? 'Login' : 'Register'
-          )}
-        </Button>
+        <SubmitButton isLoading={isLoading} mode={mode} />
         
-        <div className="text-center mt-4">
-          {mode === 'login' ? (
-            <p className="text-sm text-gray-600">
-              Don't have an account? {' '}
-              <a href="/register" className="text-easyearn-purple hover:underline">
-                Register
-              </a>
-            </p>
-          ) : (
-            <p className="text-sm text-gray-600">
-              Already have an account? {' '}
-              <a href="/login" className="text-easyearn-purple hover:underline">
-                Login
-              </a>
-            </p>
-          )}
-        </div>
+        <AuthFooter mode={mode} />
       </form>
     </div>
   );
