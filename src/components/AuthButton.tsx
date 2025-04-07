@@ -23,7 +23,7 @@ const AuthButton = () => {
             localStorage.removeItem('userEmail');
             localStorage.removeItem('userName');
             localStorage.removeItem('userPhone');
-            window.location.href = '/';
+            window.location.href = '/login';
           }}
         >
           Logout

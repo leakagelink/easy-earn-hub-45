@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,6 @@ import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const Login = () => {
-  const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [email, setEmail] = useState('');
@@ -163,6 +162,12 @@ const Login = () => {
                   Don't have an account? {' '}
                   <a href="/register" className="text-easyearn-purple font-medium hover:underline">
                     Create account
+                  </a>
+                </p>
+                <p className="text-xs text-gray-500 mt-3">
+                  Want to explore the site first? {' '}
+                  <a href="/home" className="text-easyearn-purple hover:underline">
+                    Visit homepage
                   </a>
                 </p>
               </div>
