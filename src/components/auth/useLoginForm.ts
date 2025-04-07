@@ -82,7 +82,7 @@ export function useLoginForm() {
     });
     
     setIsLoading(false);
-    navigate('/dashboard');
+    navigate('/invest'); // Changed from '/dashboard' to '/invest'
   };
   
   return {
