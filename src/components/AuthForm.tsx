@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from 'react-router-dom';
+import { Phone } from 'lucide-react';
 
 interface AuthFormProps {
   mode: 'login' | 'register';
@@ -12,40 +13,51 @@ interface AuthFormProps {
 }
 
 const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
   
   const { toast } = useToast();
   const navigate = useNavigate();
   
   const validateForm = () => {
-    if (mode === 'register' && !name) {
-      toast({
-        title: "Name is required",
-        variant: "destructive",
-      });
-      return false;
-    }
-    
-    if (!email) {
-      toast({
-        title: `Email is required`,
-        variant: "destructive",
-      });
-      return false;
-    }
-    
-    if (mode === 'register' && !phone) {
-      toast({
-        title: "Phone number is required",
-        variant: "destructive",
-      });
-      return false;
+    if (mode === 'login') {
+      if (loginMethod === 'email' && !email) {
+        toast({
+          title: "Email is required",
+          variant: "destructive",
+        });
+        return false;
+      }
+      
+      if (loginMethod === 'phone' && !phone) {
+        toast({
+          title: "Phone number is required",
+          variant: "destructive",
+        });
+        return false;
+      }
+    } else {
+      // Register mode
+      if (!phone) {
+        toast({
+          title: "Phone number is required",
+          variant: "destructive",
+        });
+        return false;
+      }
+      
+      if (!email) {
+        toast({
+          title: "Email is required",
+          variant: "destructive",
+        });
+        return false;
+      }
     }
     
     if (!password) {
@@ -79,9 +91,14 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       if (mode === 'login') {
         // Mock successful login
         localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('userEmail', email);
+        
+        if (loginMethod === 'email') {
+          localStorage.setItem('userEmail', email);
+        } else {
+          localStorage.setItem('userPhone', phone);
+        }
+        
         localStorage.setItem('userName', 'User Name');
-        localStorage.setItem('userPhone', '1234567890');
         
         toast({
           title: "Login successful",
@@ -93,7 +110,6 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         // Mock successful registration
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('userEmail', email);
-        localStorage.setItem('userName', name);
         localStorage.setItem('userPhone', phone);
         
         // If a plan was selected, mock purchase
@@ -128,40 +144,75 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       )}
       
       <form onSubmit={handleSubmit} className="space-y-4">
-        {mode === 'register' && (
-          <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
-            <Input 
-              id="name" 
-              type="text" 
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter your full name"
-            />
+        {mode === 'login' && (
+          <div className="flex justify-center space-x-4 mb-4">
+            <Button
+              type="button"
+              variant={loginMethod === 'email' ? 'default' : 'outline'}
+              className={loginMethod === 'email' ? 'bg-easyearn-purple' : ''}
+              onClick={() => setLoginMethod('email')}
+            >
+              Email
+            </Button>
+            <Button
+              type="button"
+              variant={loginMethod === 'phone' ? 'default' : 'outline'}
+              className={loginMethod === 'phone' ? 'bg-easyearn-purple' : ''}
+              onClick={() => setLoginMethod('phone')}
+            >
+              Phone
+            </Button>
           </div>
         )}
-        
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input 
-            id="email" 
-            type="email" 
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your email"
-          />
-        </div>
         
         {mode === 'register' && (
           <div className="space-y-2">
             <Label htmlFor="phone">Phone Number</Label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Phone className="h-5 w-5 text-gray-400" />
+              </div>
+              <Input 
+                id="phone" 
+                type="tel" 
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Enter your phone number"
+                className="pl-10"
+              />
+            </div>
+          </div>
+        )}
+        
+        {(mode === 'register' || (mode === 'login' && loginMethod === 'email')) && (
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
             <Input 
-              id="phone" 
-              type="tel" 
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="Enter your phone number"
+              id="email" 
+              type="email" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
             />
+          </div>
+        )}
+        
+        {(mode === 'login' && loginMethod === 'phone') && (
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone Number</Label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Phone className="h-5 w-5 text-gray-400" />
+              </div>
+              <Input 
+                id="phone" 
+                type="tel" 
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Enter your phone number"
+                className="pl-10"
+              />
+            </div>
           </div>
         )}
         
