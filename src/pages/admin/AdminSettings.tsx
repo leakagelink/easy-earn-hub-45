@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
-import { QrCode, Wallet } from 'lucide-react';
+import { QrCode, Wallet, Lock, ShieldAlert } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
+
+const passwordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(6, "Password must be at least 6 characters"),
+  confirmPassword: z.string().min(6, "Confirm password is required"),
+}).refine(data => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
 
 const AdminSettings = () => {
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
@@ -17,6 +33,26 @@ const AdminSettings = () => {
     "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48cGF0aCBkPSJNMjQuNCAyNC40aDIxLjF2MjEuMWgtMjEuMXptMjEuMSAwaDE3Ljh2NC40aC0xNy44em0tMjEuMSAyMS4xaDIxLjF2MjEuMWgtMjEuMXptMjEuMSAwaDE3Ljh2NC40aC0xNy44em0tMjEuMSAyMS4xaDI2LjZ2MjEuMWgtMjYuNnptNDguOC01My4zaDE3Ljh2MjYuNmgtMTcuOHptMjIuMiAyMi4yaDYyLjJ2MjIuMmgtMjIuMnptLTEwNi43IDI2LjZoMTMuM3YxNy44aC0xNy44em0xNy44IDB2MjIuMmgtMjIuMnYtMjIuMnptLTIyLjIgMjIuMmgyNi42djI2LjZoLTI2LjZ6bTIyLjIgMTcuOGgyMi4ydjI2LjZoLTE3Ljh6bTE3LjggMGg0OC44djE3LjhoLTQ4Ljh6bTQ4LjggMGgyMi4ydjIyLjJoLTIyLjJ6bS02Ni43IDI2LjZoMTcuOHYzMS4xaC0xNy44em0tMjYuNi0yMi4yaDI2LjZ2MjYuNmgtMjYuNnptNjIuMiAyNi42aDI2LjZ2MjYuNmgtMjYuNnptMjYuNi0yMi4yaDIyLjJ2MTcuOGgtMjIuMnptMjYuNi0yMi4yaDIyLjJ2NDQuNGgtMjIuMnptLTEzMy4zLTcxLjFoMTcuOHYxNy44aC0xNy44em0yNi42IDBoMTMuM3YxNy44aC0xMy4zem0zNS41IDQ0LjRoMjIuMnYxNy44aC0yMi4yem0tMzUuNS0xNy44aDIyLjJ2MjYuNmgtMjIuMnptMjYuNiAyNi42aDE3Ljh2MjYuNmgtMTcuOHptLTI2LjYgMjYuNmgxNy44djI2LjZoLTE3Ljh6bTY2LjcgMGgxNy44djIyLjJoLTE3Ljh6bTIyLjIgMGgyMi4ydjE3LjhoLTIyLjJ6Ii8+PC9zdmc+");
   
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [maintenanceMode, setMaintenanceMode] = useState(localStorage.getItem('maintenanceMode') === 'true');
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  
+  const form = useForm<z.infer<typeof passwordSchema>>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
+  });
+  
+  useEffect(() => {
+    // Apply maintenance mode class to body if it's enabled
+    if (maintenanceMode) {
+      document.body.classList.add('maintenance-mode');
+    } else {
+      document.body.classList.remove('maintenance-mode');
+    }
+  }, [maintenanceMode]);
   
   const handleUpiIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUpiId(e.target.value);
@@ -48,6 +84,41 @@ const AdminSettings = () => {
       description: "QR code and UPI ID have been saved successfully.",
     });
   };
+  
+  const toggleMaintenanceMode = () => {
+    const newMode = !maintenanceMode;
+    setMaintenanceMode(newMode);
+    localStorage.setItem('maintenanceMode', String(newMode));
+    
+    toast({
+      title: newMode ? "Maintenance mode enabled" : "Maintenance mode disabled",
+      description: newMode ? "Site is now in maintenance mode" : "Site is now accessible to all users",
+    });
+  };
+  
+  const onSubmitPasswordChange = (values: z.infer<typeof passwordSchema>) => {
+    const currentPassword = "Easy@123";  // Current admin password
+    
+    if (values.currentPassword !== currentPassword) {
+      toast({
+        title: "Password change failed",
+        description: "Current password is incorrect",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Update the password in localStorage
+    localStorage.setItem('adminPassword', values.newPassword);
+    
+    toast({
+      title: "Password updated successfully",
+      description: "Your admin password has been changed",
+    });
+    
+    setPasswordDialogOpen(false);
+    form.reset();
+  };
 
   if (!isAdmin) {
     window.location.href = '/admin';
@@ -65,6 +136,7 @@ const AdminSettings = () => {
             <TabsTrigger value="payment">Payment</TabsTrigger>
             <TabsTrigger value="payment-qr">QR & UPI</TabsTrigger>
             <TabsTrigger value="notification">Notification</TabsTrigger>
+            <TabsTrigger value="security">Security</TabsTrigger>
           </TabsList>
           
           <TabsContent value="general" className="space-y-4 mt-4">
@@ -109,11 +181,66 @@ const AdminSettings = () => {
             </Card>
             
             <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Maintenance Mode</h2>
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <ShieldAlert className="h-5 w-5" />
+                Maintenance Mode
+              </h2>
               <div className="space-y-4">
-                <p className="text-gray-500">Enable maintenance mode to temporarily take the site offline for updates.</p>
+                <p className="text-gray-500">
+                  Enable maintenance mode to temporarily take the site offline for updates. 
+                  Users will see a maintenance message when they try to access the site.
+                </p>
                 <div className="flex items-center space-x-4">
-                  <Button variant="outline">Enable Maintenance Mode</Button>
+                  <Switch 
+                    id="maintenance-mode"
+                    checked={maintenanceMode}
+                    onCheckedChange={toggleMaintenanceMode}
+                  />
+                  <Label htmlFor="maintenance-mode">
+                    {maintenanceMode ? "Maintenance Mode Active" : "Maintenance Mode Disabled"}
+                  </Label>
+                </div>
+                <div className={`p-4 mt-4 rounded-md ${maintenanceMode ? "bg-yellow-50 border border-yellow-200" : "bg-gray-50 border border-gray-200"}`}>
+                  <p className="text-sm">
+                    {maintenanceMode 
+                      ? "⚠️ Maintenance mode is currently ACTIVE. Users cannot access the site."
+                      : "✅ Site is fully operational and accessible to all users."}
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="security" className="space-y-4 mt-4">
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <Lock className="h-5 w-5" />
+                Admin Security
+              </h2>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <h3 className="font-medium">Admin Login Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-md">
+                    <div>
+                      <p className="text-sm text-gray-500">Email</p>
+                      <p className="font-medium">admin@easyearn.us</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Password</p>
+                      <p className="font-medium">••••••••</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="pt-2">
+                  <Button 
+                    onClick={() => setPasswordDialogOpen(true)}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <Lock className="h-4 w-4" />
+                    Change Admin Password
+                  </Button>
                 </div>
               </div>
             </Card>
@@ -273,6 +400,73 @@ const AdminSettings = () => {
           </TabsContent>
         </Tabs>
       </div>
+      
+      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Change Admin Password</DialogTitle>
+            <DialogDescription>
+              Enter your current password and a new password for your admin account.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmitPasswordChange)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="currentPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Current Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Enter current password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="newPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>New Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Enter new password" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Password must be at least 6 characters.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Confirm New Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Confirm new password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setPasswordDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">Change Password</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };
