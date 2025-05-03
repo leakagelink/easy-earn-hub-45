@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Settings, ToolIcon } from 'lucide-react';
+import { Settings, Wrench } from 'lucide-react';
 
 const MaintenancePage = () => {
   return (
@@ -18,7 +18,7 @@ const MaintenancePage = () => {
         
         <div className="bg-white p-6 rounded-lg shadow-md mb-6">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <ToolIcon className="h-5 w-5 text-yellow-600" />
+            <Wrench className="h-5 w-5 text-yellow-600" />
             <p className="font-medium text-gray-700">We're working on it!</p>
           </div>
           
