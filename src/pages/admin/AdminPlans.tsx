@@ -1,17 +1,42 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import AdminLayout from '../../components/AdminLayout';
+import AdminPlanDialog from '../../components/AdminPlanDialog';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { Edit, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+interface Plan {
+  id: number;
+  name: string;
+  minInvestment: number;
+  maxInvestment: number;
+  dailyProfit: number;
+  totalReturn: number;
+  duration: number;
+  isActive: boolean;
+}
 
 const AdminPlans = () => {
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
+  const { toast } = useToast();
 
   if (!isAdmin) {
     window.location.href = '/admin';
     return null;
   }
 
-  const plans = [
+  const [plans, setPlans] = useState<Plan[]>([
     {
       id: 1,
       name: "Basic Plan",
@@ -42,17 +67,108 @@ const AdminPlans = () => {
       duration: 30,
       isActive: false
     }
-  ];
+  ]);
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<Plan | undefined>();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [planToDelete, setPlanToDelete] = useState<Plan | undefined>();
+
+  const handleCreatePlan = () => {
+    setEditingPlan(undefined);
+    setDialogOpen(true);
+  };
+
+  const handleEditPlan = (plan: Plan) => {
+    setEditingPlan(plan);
+    setDialogOpen(true);
+  };
+
+  const handlePlanSubmit = (data: any) => {
+    if (data.isEdit) {
+      // Update existing plan
+      setPlans(prevPlans => 
+        prevPlans.map(plan => 
+          plan.id === data.id 
+            ? {
+                ...plan,
+                name: data.name,
+                minInvestment: parseInt(data.minAmount),
+                maxInvestment: parseInt(data.maxAmount),
+                dailyProfit: parseFloat(data.returnRate),
+                duration: parseInt(data.duration),
+                totalReturn: parseFloat(data.returnRate) * parseInt(data.duration),
+              }
+            : plan
+        )
+      );
+      toast({
+        title: "Plan Updated",
+        description: "Investment plan has been updated successfully.",
+      });
+    } else {
+      // Create new plan
+      const newPlan: Plan = {
+        id: Math.max(...plans.map(p => p.id)) + 1,
+        name: data.name,
+        minInvestment: parseInt(data.minAmount),
+        maxInvestment: parseInt(data.maxAmount),
+        dailyProfit: parseFloat(data.returnRate),
+        totalReturn: parseFloat(data.returnRate) * parseInt(data.duration),
+        duration: parseInt(data.duration),
+        isActive: true,
+      };
+      setPlans(prevPlans => [...prevPlans, newPlan]);
+      toast({
+        title: "Plan Created",
+        description: "New investment plan has been created successfully.",
+      });
+    }
+  };
+
+  const handleToggleStatus = (planId: number) => {
+    setPlans(prevPlans =>
+      prevPlans.map(plan =>
+        plan.id === planId ? { ...plan, isActive: !plan.isActive } : plan
+      )
+    );
+    const plan = plans.find(p => p.id === planId);
+    toast({
+      title: "Plan Status Updated",
+      description: `Plan has been ${plan?.isActive ? 'deactivated' : 'activated'}.`,
+    });
+  };
+
+  const handleDeletePlan = (plan: Plan) => {
+    setPlanToDelete(plan);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (planToDelete) {
+      setPlans(prevPlans => prevPlans.filter(plan => plan.id !== planToDelete.id));
+      toast({
+        title: "Plan Deleted",
+        description: "Investment plan has been deleted successfully.",
+      });
+      setDeleteDialogOpen(false);
+      setPlanToDelete(undefined);
+    }
+  };
 
   return (
     <AdminLayout>
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Investment Plans</h1>
-          <Button className="bg-easyearn-purple hover:bg-easyearn-darkpurple">
+          <Button 
+            onClick={handleCreatePlan}
+            className="bg-easyearn-purple hover:bg-easyearn-darkpurple"
+          >
             Add New Plan
           </Button>
         </div>
+        
         <div className="bg-white p-6 rounded-lg shadow">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -87,12 +203,32 @@ const AdminPlans = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <button className="text-easyearn-purple hover:text-easyearn-darkpurple mr-3">
-                        Edit
-                      </button>
-                      <button className={`${plan.isActive ? "text-red-600 hover:text-red-800" : "text-green-600 hover:text-green-800"}`}>
-                        {plan.isActive ? "Deactivate" : "Activate"}
-                      </button>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditPlan(plan)}
+                          className="text-easyearn-purple hover:text-easyearn-darkpurple"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleStatus(plan.id)}
+                          className={`${plan.isActive ? "text-red-600 hover:text-red-800" : "text-green-600 hover:text-green-800"}`}
+                        >
+                          {plan.isActive ? "Deactivate" : "Activate"}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeletePlan(plan)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -100,6 +236,33 @@ const AdminPlans = () => {
             </table>
           </div>
         </div>
+
+        <AdminPlanDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          plan={editingPlan}
+          onSubmit={handlePlanSubmit}
+        />
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the investment plan "{planToDelete?.name}".
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={confirmDelete}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AdminLayout>
   );
