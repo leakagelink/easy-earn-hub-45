@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import { Card } from '@/components/ui/card';
@@ -28,9 +27,8 @@ const AdminSettings = () => {
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
   const { toast } = useToast();
   
-  const [upiId, setUpiId] = useState(localStorage.getItem('paymentUpiId') || 'easyearn@upi');
-  const [qrCodeUrl, setQrCodeUrl] = useState(localStorage.getItem('paymentQrCode') || 
-    "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48cGF0aCBkPSJNMjQuNCAyNC40aDIxLjF2MjEuMWgtMjEuMXptMjEuMSAwaDE3Ljh2NC40aC0xNy44em0tMjEuMSAyMS4xaDIxLjF2MjEuMWgtMjEuMXptMjEuMSAwaDE3Ljh2NC40aC0xNy44em0tMjEuMSAyMS4xaDI2LjZ2MjEuMWgtMjYuNnptNDguOC01My4zaDE3Ljh2MjYuNmgtMTcuOHptMjIuMiAyMi4yaDYyLjJ2MjIuMmgtMjIuMnptLTEwNi43IDI2LjZoMTMuM3YxNy44aC0xNy44em0xNy44IDB2MjIuMmgtMjIuMnYtMjIuMnptLTIyLjIgMjIuMmgyNi42djI2LjZoLTI2LjZ6bTIyLjIgMTcuOGgyMi4ydjI2LjZoLTE3Ljh6bTE3LjggMGg0OC44djE3LjhoLTQ4Ljh6bTQ4LjggMGgyMi4ydjIyLjJoLTIyLjJ6bS02Ni43IDI2LjZoMTcuOHYzMS4xaC0xNy44em0tMjYuNi0yMi4yaDI2LjZ2MjYuNmgtMjYuNnptNjIuMiAyNi42aDI2LjZ2MjYuNmgtMjYuNnptMjYuNi0yMi4yaDIyLjJ2MTcuOGgtMjIuMnptMjYuNi0yMi4yaDIyLjJ2NDQuNGgtMjIuMnptLTEzMy4zLTcxLjFoMTcuOHYxNy44aC0xNy44em0yNi42IDBoMTMuM3YxNy44aC0xMy4zem0zNS41IDQ0LjRoMjIuMnYxNy44aC0yMi4yem0tMzUuNS0xNy44aDIyLjJ2MjYuNmgtMjIuMnptMjYuNiAyNi42aDE3Ljh2MjYuNmgtMTcuOHptLTI2LjYgMjYuNmgxNy44djI2LjZoLTE3Ljh6bTY2LjcgMGgxNy44djIyLjJoLTE3Ljh6bTIyLjIgMGgyMi4ydjE3LjhoLTIyLjJ6Ii8+PC9zdmc+");
+  const [upiId, setUpiId] = useState(localStorage.getItem('paymentUpiId') || 'dheerajtagde@ybl');
+  const [qrCodeUrl, setQrCodeUrl] = useState(localStorage.getItem('paymentQrCode') || '/lovable-uploads/c3bb9200-c561-4fcc-8802-68d2f7d2d937.png');
   
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [maintenanceMode, setMaintenanceMode] = useState(localStorage.getItem('maintenanceMode') === 'true');
@@ -44,6 +42,16 @@ const AdminSettings = () => {
       confirmPassword: "",
     },
   });
+  
+  // Set default values on component mount if not already set
+  useEffect(() => {
+    if (!localStorage.getItem('paymentUpiId')) {
+      localStorage.setItem('paymentUpiId', 'dheerajtagde@ybl');
+    }
+    if (!localStorage.getItem('paymentQrCode')) {
+      localStorage.setItem('paymentQrCode', '/lovable-uploads/c3bb9200-c561-4fcc-8802-68d2f7d2d937.png');
+    }
+  }, []);
   
   useEffect(() => {
     // Apply maintenance mode class to body if it's enabled
