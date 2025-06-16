@@ -25,7 +25,7 @@ const Invest = () => {
     {
       id: 1,
       name: "Plan 1",
-      price: 500,
+      price: 1,
       dailyProfit: 120,
       validityDays: 365,
       totalIncome: 43800,
