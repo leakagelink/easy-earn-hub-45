@@ -32,8 +32,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Handle both Supabase and fallback responses
       if (data.user) {
         setCurrentUser(data.user);
-        if (data.session) {
+        // Only set session if it's a proper Supabase session
+        if (data.session && 'access_token' in data.session) {
           setSession(data.session);
+        } else {
+          // For fallback users, keep session as null
+          setSession(null);
         }
         
         const userEmail = data.user.email || '';
