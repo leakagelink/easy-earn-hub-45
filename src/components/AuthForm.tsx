@@ -69,7 +69,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('Form submission started:', { mode, loginMethod, email, phone });
+    console.log('Form submission:', { mode, loginMethod, email, phone });
     
     if (!validateForm()) {
       return;
@@ -83,18 +83,17 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         console.log('Attempting login...');
         
         toast({
-          title: "Processing...",
-          description: "Please wait, we are logging you in.",
+          title: "Logging in...",
+          description: "Please wait",
         });
         
         await login(loginEmail, password);
         
         toast({
-          title: "Success! ✅",
-          description: "Login successful! Welcome back.",
+          title: "Success!",
+          description: "Login successful!",
         });
         
-        // Check if user was trying to buy a plan
         const selectedPlan = localStorage.getItem('selectedPlan');
         if (selectedPlan) {
           navigate('/payment');
@@ -106,15 +105,15 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         console.log('Attempting registration...');
         
         toast({
-          title: "Processing...",
-          description: "Please wait, we are creating your account.",
+          title: "Creating account...",
+          description: "Please wait",
         });
         
         await register(email.trim(), password, phone.trim(), referralCode.trim());
         
         toast({
-          title: "Account Created! ✅",
-          description: "Registration successful! Please check your email to verify your account.",
+          title: "Account Created!",
+          description: "Registration successful! Please check your email.",
           duration: 6000,
         });
         
@@ -122,7 +121,6 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
           localStorage.setItem('selectedPlan', selectedPlan);
         }
         
-        // Clear form
         setEmail('');
         setPhone('');
         setPassword('');
@@ -137,18 +135,13 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     } catch (error: any) {
       console.error('Auth error:', error);
       
-      const errorTitle = mode === 'login' ? "Login Failed ❌" : "Registration Failed ❌";
+      const errorTitle = mode === 'login' ? "Login Failed" : "Registration Failed";
       let errorMessage = error.message;
       
-      // Handle specific error messages
       if (error.message?.includes('Invalid login credentials')) {
-        errorMessage = 'Incorrect email or password. Please try again.';
+        errorMessage = 'Wrong email or password';
       } else if (error.message?.includes('User already registered')) {
-        errorMessage = 'This email is already registered. Please try logging in instead.';
-      } else if (error.message?.includes('fetch') || error.message?.includes('network') || error.message?.includes('Failed to fetch')) {
-        errorMessage = 'Network connection problem. Please check your internet connection and try again.';
-      } else if (error.message?.includes('timeout')) {
-        errorMessage = 'Request timed out. Please try again.';
+        errorMessage = 'Email already registered. Try logging in.';
       }
       
       toast({
@@ -213,7 +206,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       <div className="mt-4 text-center">
         <p className="text-xs text-green-600 font-medium">
-          ✅ Enhanced Supabase integration with retry mechanism
+          ✅ Supabase connection optimized
         </p>
       </div>
     </div>

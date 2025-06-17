@@ -8,15 +8,11 @@ export interface AuthOperationsParams {
   setIsAdmin: (isAdmin: boolean) => void;
 }
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-const clearAllAuthData = () => {
+const clearAuthData = () => {
   try {
-    // Clear all possible auth keys
     const keysToRemove = [
       'supabase.auth.token',
       'sb-mmzzgesweeubscbwzaia-auth-token',
-      'supabase.auth.session',
       'selectedPlan'
     ];
     
@@ -25,162 +21,101 @@ const clearAllAuthData = () => {
       sessionStorage.removeItem(key);
     });
     
-    // Clear all keys that contain 'supabase' or 'sb-'
     Object.keys(localStorage).forEach(key => {
       if (key.includes('supabase') || key.includes('sb-')) {
         localStorage.removeItem(key);
       }
     });
     
-    console.log('Auth data cleared successfully');
+    console.log('Auth data cleared');
   } catch (error) {
     console.error('Error clearing auth data:', error);
   }
 };
 
-const retryOperation = async (operation: () => Promise<any>, maxRetries = 3, delayMs = 1000) => {
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      console.log(`Operation attempt ${i + 1}/${maxRetries}`);
-      const result = await operation();
-      console.log(`Operation successful on attempt ${i + 1}`);
-      return result;
-    } catch (error: any) {
-      console.error(`Attempt ${i + 1} failed:`, error.message);
-      
-      if (i === maxRetries - 1) {
-        throw error;
-      }
-      
-      const waitTime = delayMs * Math.pow(2, i); // Exponential backoff
-      console.log(`Waiting ${waitTime}ms before retry...`);
-      await delay(waitTime);
-    }
-  }
-};
-
 export const createAuthOperations = ({ setCurrentUser, setSession, setIsAdmin }: AuthOperationsParams) => {
   const login = async (email: string, password: string) => {
-    console.log('Starting enhanced login process for:', email);
+    console.log('Starting login for:', email);
     
     try {
-      // Clear any existing auth state
-      clearAllAuthData();
+      clearAuthData();
       
-      // Force sign out first
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-        await delay(1000);
-      } catch (error) {
-        console.log('Sign out before login failed (continuing):', error);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password: password
+      });
+
+      if (error) {
+        console.error('Login error:', error);
+        throw new Error(error.message);
       }
-      
-      const result = await retryOperation(async () => {
-        console.log('Attempting sign in with password...');
-        
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: email.trim().toLowerCase(),
-          password: password
-        });
 
-        if (error) {
-          console.error('Sign in error:', error);
-          throw new Error(error.message);
-        }
+      if (!data.user) {
+        throw new Error('No user returned from sign in');
+      }
 
-        if (!data.user) {
-          throw new Error('No user returned from sign in');
-        }
-
-        console.log('Sign in successful:', data.user.email);
-        return data;
-      }, 3, 2000);
-
-      return result;
+      console.log('Login successful:', data.user.email);
+      return data;
     } catch (error: any) {
-      console.error('Login failed after all retries:', error);
-      throw new Error(error.message || 'Login failed. Please check your internet connection and try again.');
+      console.error('Login failed:', error);
+      throw new Error(error.message || 'Login failed. Please try again.');
     }
   };
 
   const register = async (email: string, password: string, phone: string, referralCode?: string) => {
-    console.log('Starting enhanced registration for:', email);
+    console.log('Starting registration for:', email);
     
     try {
-      // Clear any existing auth state
-      clearAllAuthData();
+      clearAuthData();
       
-      // Force sign out first
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-        await delay(1000);
-      } catch (error) {
-        console.log('Sign out before registration failed (continuing):', error);
-      }
-      
-      const result = await retryOperation(async () => {
-        console.log('Attempting user registration...');
-        
-        const { data, error } = await supabase.auth.signUp({
-          email: email.trim().toLowerCase(),
-          password: password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`,
-            data: {
-              phone: phone.trim().replace(/\D/g, ''),
-              referralCode: referralCode?.trim() || ''
-            }
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password: password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            phone: phone.trim().replace(/\D/g, ''),
+            referralCode: referralCode?.trim() || ''
           }
-        });
-
-        if (error) {
-          console.error('Registration error:', error);
-          throw new Error(error.message);
         }
+      });
 
-        if (!data.user) {
-          throw new Error('No user returned from registration');
-        }
+      if (error) {
+        console.error('Registration error:', error);
+        throw new Error(error.message);
+      }
 
-        console.log('Registration successful:', data.user.email);
-        return data;
-      }, 3, 2000);
+      if (!data.user) {
+        throw new Error('No user returned from registration');
+      }
 
-      return result;
+      console.log('Registration successful:', data.user.email);
+      return data;
     } catch (error: any) {
-      console.error('Registration failed after all retries:', error);
-      throw new Error(error.message || 'Registration failed. Please check your internet connection and try again.');
+      console.error('Registration failed:', error);
+      throw new Error(error.message || 'Registration failed. Please try again.');
     }
   };
 
   const logout = async () => {
-    console.log('Starting enhanced logout process...');
+    console.log('Starting logout...');
     try {
-      // Clear auth data first
-      clearAllAuthData();
+      clearAuthData();
       
-      // Attempt sign out
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-      } catch (error) {
-        console.error('Sign out error (continuing):', error);
-      }
+      await supabase.auth.signOut();
       
-      // Update state
       setCurrentUser(null);
       setSession(null);
       setIsAdmin(false);
       
-      console.log('Logout completed successfully');
+      console.log('Logout completed');
       
-      // Force page refresh for clean state
       setTimeout(() => {
         window.location.href = '/';
       }, 100);
       
     } catch (error) {
-      console.error('Logout failed:', error);
-      // Force clean state even if logout fails
+      console.error('Logout error:', error);
       setCurrentUser(null);
       setSession(null);
       setIsAdmin(false);
