@@ -24,10 +24,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     },
     fetch: (url, options = {}) => {
       console.log('Supabase fetch:', url);
-      return fetch(url, {
-        ...options,
-        timeout: 10000, // 10 second timeout
-      });
+      return fetch(url, options);
     }
   },
   db: {

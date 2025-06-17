@@ -21,7 +21,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
 
   const login = async (email: string, password: string) => {
     console.log('AuthProvider: Starting login process for:', email);
@@ -60,23 +59,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('AuthProvider: Initializing auth state...');
     
     let mounted = true;
-    let authListener: any = null;
     
     const initializeAuth = async () => {
       try {
+        // Set up auth state listener first
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          (event, session) => {
+            if (!mounted) return;
+            
+            console.log('AuthProvider: Auth state changed:', event, session?.user?.email || 'No user');
+            
+            setSession(session);
+            setCurrentUser(session?.user ?? null);
+            
+            if (session?.user) {
+              const userEmail = session.user.email || '';
+              const userName = session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User';
+              const isAdminUser = checkIsAdmin(userEmail);
+              
+              console.log('AuthProvider: Setting user storage for:', userEmail, 'isAdmin:', isAdminUser);
+              setUserStorage(userEmail, userName, isAdminUser);
+              setIsAdmin(isAdminUser);
+            } else {
+              console.log('AuthProvider: No user, clearing storage');
+              clearUserStorage();
+              setIsAdmin(false);
+            }
+          }
+        );
+
+        // Get initial session
         console.log('AuthProvider: Getting initial session...');
         const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (!mounted) {
-          console.log('AuthProvider: Component unmounted, aborting initialization');
-          return;
-        }
+        if (!mounted) return;
         
         if (error) {
           console.error('AuthProvider: Error getting initial session:', error);
-          setSession(null);
-          setCurrentUser(null);
-          setIsAdmin(false);
         } else {
           console.log('AuthProvider: Initial session loaded:', session?.user?.email || 'No user');
           
@@ -88,15 +107,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const userName = session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User';
             const isAdminUser = checkIsAdmin(userEmail);
             
-            console.log('AuthProvider: Setting user storage for:', userEmail, 'isAdmin:', isAdminUser);
             setUserStorage(userEmail, userName, isAdminUser);
             setIsAdmin(isAdminUser);
           } else {
-            console.log('AuthProvider: No session found, clearing storage');
             clearUserStorage();
             setIsAdmin(false);
           }
         }
+        
+        return subscription;
       } catch (error) {
         console.error('AuthProvider: Error in initializeAuth:', error);
         if (mounted) {
@@ -104,70 +123,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setCurrentUser(null);
           setIsAdmin(false);
         }
+        return null;
       } finally {
         if (mounted) {
           console.log('AuthProvider: Auth initialization complete');
           setLoading(false);
-          setIsInitialized(true);
         }
       }
     };
 
-    // Set up auth state listener first
-    console.log('AuthProvider: Setting up auth state listener...');
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (!mounted) {
-          console.log('AuthProvider: Component unmounted, ignoring auth state change');
-          return;
-        }
-        
-        console.log('AuthProvider: Auth state changed:', event, session?.user?.email || 'No user');
-        
-        setSession(session);
-        setCurrentUser(session?.user ?? null);
-        
-        if (session?.user) {
-          const userEmail = session.user.email || '';
-          const userName = session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User';
-          const isAdminUser = checkIsAdmin(userEmail);
-          
-          console.log('AuthProvider: Auth state change - setting user storage for:', userEmail);
-          setUserStorage(userEmail, userName, isAdminUser);
-          setIsAdmin(isAdminUser);
-        } else {
-          console.log('AuthProvider: Auth state change - no user, clearing storage');
-          clearUserStorage();
-          setIsAdmin(false);
-        }
+    initializeAuth().then((subscription) => {
+      // Store subscription for cleanup
+      if (subscription) {
+        return () => {
+          console.log('AuthProvider: Cleaning up auth listener');
+          mounted = false;
+          subscription.unsubscribe();
+        };
       }
-    );
-    
-    authListener = subscription;
-
-    // Initialize auth state after setting up listener
-    initializeAuth();
+    });
 
     return () => {
-      console.log('AuthProvider: Cleaning up auth listener');
       mounted = false;
-      if (authListener) {
-        authListener.unsubscribe();
-      }
     };
   }, []);
-
-  // Show loading screen until auth is fully initialized
-  if (!isInitialized) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-easyearn-purple mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">Loading authentication...</p>
-        </div>
-      </div>
-    );
-  }
 
   const value: AuthContextType = {
     currentUser,
