@@ -83,15 +83,15 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         console.log('Attempting login...');
         
         toast({
-          title: "Logging in...",
-          description: "Please wait while we sign you in.",
+          title: "Processing...",
+          description: "Please wait, we are logging you in.",
         });
         
         await login(loginEmail, password);
         
         toast({
-          title: "Welcome back! ✅",
-          description: "Login successful!",
+          title: "Success! ✅",
+          description: "Login successful! Welcome back.",
         });
         
         // Check if user was trying to buy a plan
@@ -106,16 +106,16 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         console.log('Attempting registration...');
         
         toast({
-          title: "Creating account...",
-          description: "Please wait while we create your account.",
+          title: "Processing...",
+          description: "Please wait, we are creating your account.",
         });
         
         await register(email.trim(), password, phone.trim(), referralCode.trim());
         
         toast({
-          title: "Account created successfully! ✅",
-          description: "Please check your email to verify your account.",
-          duration: 5000,
+          title: "Account Created! ✅",
+          description: "Registration successful! Please check your email to verify your account.",
+          duration: 6000,
         });
         
         if (selectedPlan) {
@@ -137,23 +137,25 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     } catch (error: any) {
       console.error('Auth error:', error);
       
-      const errorTitle = mode === 'login' ? "Login failed ❌" : "Registration failed ❌";
+      const errorTitle = mode === 'login' ? "Login Failed ❌" : "Registration Failed ❌";
       let errorMessage = error.message;
       
       // Handle specific error messages
       if (error.message?.includes('Invalid login credentials')) {
-        errorMessage = 'Email या password गलत है। कृपया फिर से कोशिश करें।';
+        errorMessage = 'Incorrect email or password. Please try again.';
       } else if (error.message?.includes('User already registered')) {
-        errorMessage = 'यह email पहले से registered है। Login करने की कोशिश करें।';
-      } else if (error.message?.includes('fetch') || error.message?.includes('network')) {
-        errorMessage = 'Internet connection problem है। कुछ देर बाद try करें।';
+        errorMessage = 'This email is already registered. Please try logging in instead.';
+      } else if (error.message?.includes('fetch') || error.message?.includes('network') || error.message?.includes('Failed to fetch')) {
+        errorMessage = 'Network connection problem. Please check your internet connection and try again.';
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = 'Request timed out. Please try again.';
       }
       
       toast({
         title: errorTitle,
         description: errorMessage,
         variant: "destructive",
-        duration: 5000,
+        duration: 6000,
       });
     } finally {
       setIsLoading(false);
