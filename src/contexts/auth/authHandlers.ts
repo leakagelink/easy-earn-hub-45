@@ -1,6 +1,8 @@
 
-import { supabase } from '@/integrations/supabase/client';
-import { getSupabaseErrorMessage } from './errorUtils';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
+import { getFirebaseErrorMessage } from './errorUtils';
 import { setUserStorage, clearUserStorage, checkIsAdmin } from './storageUtils';
 
 export const handleLogin = async (
@@ -16,30 +18,15 @@ export const handleLogin = async (
       throw new Error('No internet connection. Please check your network and try again.');
     }
     
-    // Clear any existing auth state first
-    try {
-      await supabase.auth.signOut();
-      console.log('Cleared existing auth state');
-    } catch (clearError) {
-      console.log('No existing auth state to clear');
-    }
+    console.log('Attempting login with Firebase...');
+    const userCredential = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+    const user = userCredential.user;
     
-    console.log('Attempting login with Supabase...');
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
-      password,
-    });
-    
-    if (error) {
-      console.error('Supabase login error:', error);
-      throw error;
-    }
-    
-    if (!data.user) {
+    if (!user) {
       throw new Error('Login failed: No user returned');
     }
     
-    console.log('Login successful for user:', data.user.email);
+    console.log('Login successful for user:', user.email);
     
     // Check if user is admin
     const isAdmin = checkIsAdmin(email);
@@ -49,11 +36,11 @@ export const handleLogin = async (
       console.log('Admin user logged in');
     }
     
-    return data;
+    return userCredential;
     
   } catch (error: any) {
     console.error('Login error details:', error);
-    throw new Error(getSupabaseErrorMessage(error.message));
+    throw new Error(getFirebaseErrorMessage(error.code || error.message));
   }
 };
 
@@ -89,54 +76,34 @@ export const handleRegister = async (
       throw new Error('Please enter a valid email address');
     }
     
-    // Clear any existing auth state first
-    try {
-      await supabase.auth.signOut();
-      console.log('Cleared existing auth state before registration');
-    } catch (clearError) {
-      console.log('No existing auth state to clear');
-    }
+    console.log('Attempting registration with Firebase...');
+    const userCredential = await createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+    const user = userCredential.user;
     
-    // Get the current origin for redirect URL
-    const currentOrigin = window.location.origin;
-    console.log('Using redirect URL:', currentOrigin);
-    
-    console.log('Attempting registration with Supabase...');
-    const { data, error } = await supabase.auth.signUp({
-      email: email.trim().toLowerCase(),
-      password,
-      options: {
-        data: {
-          phone: phone.trim(),
-          referral_code: referralCode?.trim() || '',
-          name: email.split('@')[0] // Use email prefix as default name
-        },
-        emailRedirectTo: `${currentOrigin}/login`
-      }
-    });
-    
-    if (error) {
-      console.error('Supabase signup error:', error);
-      throw error;
-    }
-    
-    console.log('Registration response:', data);
-    
-    if (data.user) {
-      console.log('User created successfully:', data.user.email);
+    if (user) {
+      console.log('User created successfully:', user.email);
       
-      if (!data.session) {
-        console.log('Email confirmation required');
-      } else {
-        console.log('User automatically signed in');
-      }
+      // Update user profile with display name
+      const displayName = email.split('@')[0];
+      await updateProfile(user, { displayName });
+      
+      // Create user document in Firestore
+      await setDoc(doc(db, 'profiles', user.uid), {
+        email: user.email,
+        phone: phone.trim(),
+        referralCode: referralCode?.trim() || '',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      console.log('User profile created in Firestore');
     }
     
-    return data;
+    return userCredential;
     
   } catch (error: any) {
     console.error('Registration error details:', error);
-    throw new Error(getSupabaseErrorMessage(error.message));
+    throw new Error(getFirebaseErrorMessage(error.code || error.message));
   }
 };
 
@@ -150,12 +117,8 @@ export const handleLogout = async (
     setIsAdmin(false);
     clearUserStorage();
     
-    // Sign out from Supabase
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('Supabase logout error:', error);
-      throw error;
-    }
+    // Sign out from Firebase
+    await signOut(auth);
     
     console.log('Logout successful');
     
