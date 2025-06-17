@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -48,6 +49,43 @@ const MaintenanceCheck = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// AppRoutes component that contains all routes and is wrapped by AuthProvider
+const AppRoutes = () => {
+  return (
+    <MaintenanceCheck>
+      <Routes>
+        {/* Redirect the root path to login page */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/home" element={<Index />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/recharge" element={<Recharge />} />
+        <Route path="/withdraw" element={<Withdraw />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/invest" element={<Invest />} />
+        <Route path="/payment" element={<Payment />} />
+        <Route path="/maintenance" element={<MaintenancePage />} />
+        
+        {/* Admin routes */}
+        <Route path="/admin" element={<Admin />} />
+        <Route path="/admin/users" element={<AdminUsers />} />
+        <Route path="/admin/investments" element={<AdminInvestments />} />
+        <Route path="/admin/transactions" element={<AdminTransactions />} />
+        <Route path="/admin/withdrawals" element={<AdminWithdrawals />} />
+        <Route path="/admin/plans" element={<AdminPlans />} />
+        <Route path="/admin/security" element={<AdminSecurity />} />
+        <Route path="/admin/settings" element={<AdminSettings />} />
+        <Route path="/admin/reports" element={<AdminReports />} />
+        
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <BottomBar />
+    </MaintenanceCheck>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -55,37 +93,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <MaintenanceCheck>
-            <Routes>
-              {/* Redirect the root path to login page */}
-              <Route path="/" element={<Navigate to="/login" replace />} />
-              <Route path="/home" element={<Index />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/recharge" element={<Recharge />} />
-              <Route path="/withdraw" element={<Withdraw />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/invest" element={<Invest />} />
-              <Route path="/payment" element={<Payment />} />
-              <Route path="/maintenance" element={<MaintenancePage />} />
-              
-              {/* Admin routes */}
-              <Route path="/admin" element={<Admin />} />
-              <Route path="/admin/users" element={<AdminUsers />} />
-              <Route path="/admin/investments" element={<AdminInvestments />} />
-              <Route path="/admin/transactions" element={<AdminTransactions />} />
-              <Route path="/admin/withdrawals" element={<AdminWithdrawals />} />
-              <Route path="/admin/plans" element={<AdminPlans />} />
-              <Route path="/admin/security" element={<AdminSecurity />} />
-              <Route path="/admin/settings" element={<AdminSettings />} />
-              <Route path="/admin/reports" element={<AdminReports />} />
-              
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <BottomBar />
-          </MaintenanceCheck>
+          <AppRoutes />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
