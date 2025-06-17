@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   User, 
+  UserCredential,
   onAuthStateChanged, 
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -13,8 +14,8 @@ import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 interface AuthContextType {
   currentUser: User | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, phone: string, referralCode?: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<UserCredential>;
+  register: (email: string, password: string, phone: string, referralCode?: string) => Promise<UserCredential>;
   logout: () => Promise<void>;
   loading: boolean;
   isAdmin: boolean;
