@@ -29,32 +29,59 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const navigate = useNavigate();
   const { login, register } = useAuth();
   
+  const getErrorMessage = (error: any) => {
+    console.log('🔍 Processing error:', error);
+    
+    if (error.message?.includes('Invalid login credentials')) {
+      return 'गलत email या password है। फिर से कोशिश करें।';
+    }
+    if (error.message?.includes('User already registered')) {
+      return 'यह email पहले से registered है। Login करने की कोशिश करें।';
+    }
+    if (error.message?.includes('Password should be at least 6 characters')) {
+      return 'Password कम से कम 6 अक्षर का होना चाहिए।';
+    }
+    if (error.message?.includes('Invalid email')) {
+      return 'सही email address डालें।';
+    }
+    if (error.message?.includes('fetch') || error.message?.includes('Failed to fetch')) {
+      return 'Internet connection की समस्या है। कुछ देर बाद कोशिश करें।';
+    }
+    
+    return error.message || 'कुछ गलत हुआ है। फिर से कोशिश करें।';
+  };
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('Form submission:', { mode, email, phone });
+    console.log('📋 Form submission:', { mode, email, phone, loginMethod });
     
+    // Validation
     if (!password) {
-      toast({ title: "Password required", variant: "destructive" });
+      toast({ title: "Password जरूरी है", variant: "destructive" });
       return;
     }
     
     if (mode === 'login') {
       if (loginMethod === 'email' && !email) {
-        toast({ title: "Email required", variant: "destructive" });
+        toast({ title: "Email जरूरी है", variant: "destructive" });
         return;
       }
       if (loginMethod === 'phone' && !phone) {
-        toast({ title: "Phone required", variant: "destructive" });
+        toast({ title: "Phone number जरूरी है", variant: "destructive" });
         return;
       }
     } else {
       if (!email || !phone) {
-        toast({ title: "All fields required", variant: "destructive" });
+        toast({ title: "सभी fields जरूरी हैं", variant: "destructive" });
         return;
       }
       if (password !== confirmPassword) {
-        toast({ title: "Passwords don't match", variant: "destructive" });
+        toast({ title: "Passwords match नहीं हो रहे", variant: "destructive" });
+        return;
+      }
+      if (password.length < 6) {
+        toast({ title: "Password कम से कम 6 अक्षर का होना चाहिए", variant: "destructive" });
         return;
       }
     }
@@ -64,35 +91,30 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     try {
       if (mode === 'login') {
         const loginEmail = loginMethod === 'email' ? email : `${phone}@easyearn.com`;
+        console.log('🔑 Attempting login with:', loginEmail);
         await login(loginEmail, password);
         
-        toast({ title: "Login successful!" });
+        toast({ title: "✅ Login successful!" });
         navigate(localStorage.getItem('selectedPlan') ? '/payment' : '/invest');
       } else {
+        console.log('📝 Attempting registration...');
         await register(email, password, phone, referralCode);
         
         toast({ 
-          title: "Registration successful!", 
-          description: "Check your email to verify account" 
+          title: "✅ Registration successful!", 
+          description: "Email verify करने के लिए check करें" 
         });
         
         if (selectedPlan) localStorage.setItem('selectedPlan', selectedPlan);
         navigate('/login');
       }
     } catch (error: any) {
-      console.error('Auth error:', error);
+      console.error('💥 Auth error:', error);
       
-      let errorMessage = 'Something went wrong';
-      if (error.message?.includes('Invalid login credentials')) {
-        errorMessage = 'Wrong email or password';
-      } else if (error.message?.includes('User already registered')) {
-        errorMessage = 'Email already exists';
-      } else if (error.message?.includes('fetch')) {
-        errorMessage = 'Network error - check connection';
-      }
+      const errorMessage = getErrorMessage(error);
       
       toast({
-        title: mode === 'login' ? "Login Failed" : "Registration Failed",
+        title: mode === 'login' ? "❌ Login Failed" : "❌ Registration Failed",
         description: errorMessage,
         variant: "destructive"
       });
@@ -104,13 +126,13 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   return (
     <div className="mx-auto w-full max-w-md p-6 bg-white rounded-lg shadow-md">
       <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
-        {mode === 'login' ? 'Login to your account' : 'Create a new account'}
+        {mode === 'login' ? 'अपने account में login करें' : 'नया account बनाएं'}
       </h2>
       
       {selectedPlan && (
         <div className="mb-6 p-3 bg-easyearn-purple/10 rounded-md">
           <p className="text-sm text-center text-easyearn-purple">
-            You're registering for Plan {selectedPlan}
+            आप Plan {selectedPlan} के लिए register कर रहे हैं
           </p>
         </div>
       )}
@@ -138,7 +160,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
               password={confirmPassword} 
               setPassword={setConfirmPassword}
               id="confirmPassword"
-              label="Confirm Password"
+              label="Password फिर से डालें"
             />
             <ReferralInput referralCode={referralCode} setReferralCode={setReferralCode} />
           </>
@@ -149,8 +171,8 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       </form>
       
       <div className="mt-4 text-center">
-        <p className="text-xs text-blue-600 font-medium">
-          🔧 Fresh Supabase connection
+        <p className="text-xs text-green-600 font-medium">
+          🔧 Fresh Supabase configuration with detailed logging
         </p>
       </div>
     </div>
