@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
@@ -10,6 +9,7 @@ import PasswordInput from './auth/PasswordInput';
 import ReferralInput from './auth/ReferralInput';
 import SubmitButton from './auth/SubmitButton';
 import AuthFooter from './auth/AuthFooter';
+import NetworkStatus from './NetworkStatus';
 
 interface AuthFormProps {
   mode: 'login' | 'register';
@@ -17,7 +17,7 @@ interface AuthFormProps {
 }
 
 const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
-  console.log('🔥 Appwrite AuthForm rendering with mode:', mode);
+  console.log('🔥 Enhanced AuthForm rendering with mode:', mode);
   
   // Add safety check for auth context
   let authContext;
@@ -68,7 +68,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('📋 Appwrite form submission:', { mode, email, phone, loginMethod });
+    console.log('📋 Form submission:', { mode, email, phone, loginMethod });
     
     // Enhanced validation
     if (!password || password.length < 8) {
@@ -108,7 +108,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     try {
       if (mode === 'login') {
         const loginEmail = loginMethod === 'email' ? email : `${phone}@easyearn.com`;
-        console.log('🔑 Attempting Appwrite login with:', loginEmail);
+        console.log('🔑 Attempting login with:', loginEmail);
         await login(loginEmail, password);
         
         toast({ 
@@ -117,8 +117,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         });
         navigate(localStorage.getItem('selectedPlan') ? '/payment' : '/invest');
       } else {
-        console.log('📝 Attempting Appwrite registration...');
-        console.log('📊 Registration data:', { email, phone, referralCode });
+        console.log('📝 Attempting registration...');
         
         await register(email, password, phone, referralCode);
         
@@ -131,7 +130,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         navigate('/login');
       }
     } catch (error: any) {
-      console.error('💥 Appwrite auth error:', error);
+      console.error('💥 Auth error:', error);
       
       toast({
         title: mode === 'login' ? "❌ Login Failed" : "❌ Registration Failed",
@@ -145,6 +144,8 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   
   return (
     <div className="mx-auto w-full max-w-md p-6 bg-white rounded-lg shadow-md">
+      <NetworkStatus />
+      
       <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
         {mode === 'login' ? 'अपने account में login करें' : 'नया account बनाएं'}
       </h2>
@@ -192,10 +193,10 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       <div className="mt-4 text-center">
         <p className="text-xs text-green-600 font-medium">
-          🚀 Powered by Appwrite - Secure & Fast
+          🔄 Enhanced System - Multiple Fallbacks
         </p>
         <p className="text-xs text-gray-500 mt-1">
-          European servers से fast connection
+          Network issues के लिए automatic backup system
         </p>
       </div>
     </div>

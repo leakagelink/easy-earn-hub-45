@@ -1,93 +1,88 @@
 
 import { useState, useEffect } from 'react';
-import { Models } from 'appwrite';
 import { account, databases, DATABASE_ID, COLLECTIONS } from '@/integrations/appwrite/client';
+import { FallbackAuthSystem } from '@/utils/fallbackAuth';
+import { enhancedAppwriteClient } from '@/integrations/appwrite/enhancedClient';
+import { logNetworkDiagnostics } from '@/utils/networkDiagnostics';
 import { ExtendedUser, UserProfile } from './types';
 
 export const useAuthState = () => {
   const [currentUser, setCurrentUser] = useState<ExtendedUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('🔥 Setting up Appwrite auth state listener...');
-    
-    let mounted = true;
-    
-    const checkAuthState = async () => {
+    const initializeAuth = async () => {
+      console.log('🔄 Initializing auth state...');
+      
       try {
-        // Check if user has active session
-        const user = await account.get();
+        // Check network status first
+        const networkStatus = await logNetworkDiagnostics();
         
-        if (!mounted) return;
+        if (!networkStatus.canReachAppwrite) {
+          console.log('⚠️ Appwrite unreachable, checking fallback auth...');
+          
+          const fallbackSession = FallbackAuthSystem.getCurrentSession();
+          if (fallbackSession) {
+            const user = fallbackSession.user as ExtendedUser;
+            setCurrentUser(user);
+            setIsAdmin(user.email === 'admin@easyearn.us');
+            console.log('✅ Fallback session restored');
+          }
+          
+          setLoading(false);
+          return;
+        }
         
-        console.log('🔥 Auth state found user:', user.email);
-        setCurrentUser(user);
+        // Try to get current Appwrite session
+        const user = await enhancedAppwriteClient.getAccount();
+        console.log('✅ Appwrite session found:', user.email);
         
-        // Check if user is admin
-        const isAdminUser = user.email === 'admin@easyearn.us';
-        setIsAdmin(isAdminUser);
+        setCurrentUser(user as ExtendedUser);
+        setIsAdmin(user.email === 'admin@easyearn.us');
         
-        // Get user profile from database
+        // Try to load user profile
         try {
-          const profileResponse = await databases.listDocuments(
+          const profileResponse = await enhancedAppwriteClient.listDocuments(
             DATABASE_ID,
             COLLECTIONS.USERS,
             [`userId=="${user.$id}"`]
           );
           
           if (profileResponse.documents.length > 0) {
-            const profile = profileResponse.documents[0] as any;
-            setUserProfile({
-              userId: profile.userId,
-              email: profile.email,
-              phone: profile.phone,
-              referralCode: profile.referralCode,
-              verified: profile.verified,
-              isAdmin: profile.isAdmin || isAdminUser,
-              createdAt: profile.createdAt,
-              lastLoginAt: profile.lastLoginAt
-            });
-            
-            // Update last login
-            await databases.updateDocument(
-              DATABASE_ID,
-              COLLECTIONS.USERS,
-              profile.$id,
-              { lastLoginAt: new Date().toISOString() }
-            );
+            setUserProfile(profileResponse.documents[0] as unknown as UserProfile);
           }
-        } catch (dbError) {
-          console.error('❌ Error fetching user profile:', dbError);
+        } catch (profileError) {
+          console.log('Could not load user profile:', profileError);
         }
         
-      } catch (error) {
-        console.log('🔥 No active session found');
-        setCurrentUser(null);
-        setUserProfile(null);
-        setIsAdmin(false);
-      } finally {
-        if (mounted) {
-          setLoading(false);
+      } catch (error: any) {
+        console.log('No active session found:', error.message);
+        
+        // Check for fallback session
+        const fallbackSession = FallbackAuthSystem.getCurrentSession();
+        if (fallbackSession) {
+          const user = fallbackSession.user as ExtendedUser;
+          setCurrentUser(user);
+          setIsAdmin(user.email === 'admin@easyearn.us');
+          console.log('✅ Using fallback session');
         }
+      } finally {
+        setLoading(false);
       }
     };
 
-    checkAuthState();
-
-    return () => {
-      mounted = false;
-    };
+    initializeAuth();
   }, []);
 
   return {
     currentUser,
-    userProfile,
-    loading,
-    isAdmin,
     setCurrentUser,
+    userProfile,
     setUserProfile,
-    setIsAdmin
+    isAdmin,
+    setIsAdmin,
+    loading
   };
 };
