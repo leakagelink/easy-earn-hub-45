@@ -38,7 +38,7 @@ export const getFirebaseErrorMessage = (errorCode: string) => {
       return 'Too many failed attempts. Please wait a few minutes and try again.';
     
     case 'auth/network-request-failed':
-      return 'Connection error. Please check your internet connection and try again.';
+      return 'Unable to connect to the authentication service. Please try again.';
     
     case 'auth/user-disabled':
       return 'This account has been disabled. Please contact support.';
@@ -54,12 +54,12 @@ export const getFirebaseErrorMessage = (errorCode: string) => {
     default:
       // Handle fetch errors and other network issues
       if (errorCode.includes('Failed to fetch') || errorCode.includes('TypeError')) {
-        return 'Unable to connect to authentication service. Please try again in a few moments.';
+        return 'Unable to connect to authentication service. Please try again.';
       }
       
       // Return a more user-friendly message for unknown errors
       return errorCode.includes('auth/') 
         ? 'Authentication error. Please try again or contact support if the problem persists.'
-        : 'Service temporarily unavailable. Please try again in a few moments.';
+        : 'Service temporarily unavailable. Please try again.';
   }
 };

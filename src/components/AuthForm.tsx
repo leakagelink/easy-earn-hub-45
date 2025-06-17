@@ -36,16 +36,6 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     
     console.log('Form submission started:', { mode, loginMethod, email, phone });
     
-    // Basic network connectivity check only
-    if (!navigator.onLine) {
-      toast({
-        title: "No Internet Connection",
-        description: "Please check your network connection and try again.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
     const isValid = validateForm({
       mode,
       loginMethod,

@@ -13,7 +13,6 @@ export const handleLogin = async (
   try {
     console.log('Starting login process for:', email);
     
-    console.log('Attempting login with Firebase...');
     const userCredential = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
     const user = userCredential.user;
     
@@ -69,13 +68,8 @@ export const handleRegister = async (
     
     console.log('Validation passed, attempting registration with Firebase...');
     
-    // Add timeout to the registration request
-    const registrationPromise = createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
-    const timeoutPromise = new Promise<never>((_, reject) => 
-      setTimeout(() => reject(new Error('Registration is taking longer than expected. Please try again.')), 30000)
-    );
-    
-    const userCredential: UserCredential = await Promise.race([registrationPromise, timeoutPromise]);
+    // Direct registration without timeout to avoid Promise.race issues
+    const userCredential: UserCredential = await createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
     const user = userCredential.user;
     
     if (user) {

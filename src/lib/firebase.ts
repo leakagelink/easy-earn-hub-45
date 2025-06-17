@@ -22,10 +22,10 @@ export const auth = getAuth(app);
 // Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
 
-// Enable network for better connectivity (but don't force it)
-import { enableNetwork } from 'firebase/firestore';
-enableNetwork(db).catch((error) => {
-  console.warn('Failed to enable Firestore network (this is normal in some environments):', error);
-});
+// Configure auth settings for better connectivity
+auth.languageCode = 'en';
+
+// Don't use enableNetwork as it can cause CORS issues in some environments
+console.log('Firebase initialized successfully');
 
 export default app;
