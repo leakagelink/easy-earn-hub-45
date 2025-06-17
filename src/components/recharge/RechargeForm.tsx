@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/auth";
-import { createPaymentRequest } from '@/services/firestoreService';
+import { createPaymentRequest } from '@/services/appwriteService';
 import { Wallet } from "lucide-react";
 import QuickAmountButtons from './QuickAmountButtons';
 
@@ -59,16 +59,16 @@ const RechargeForm = () => {
     setIsSubmitting(true);
     
     try {
-      console.log('Submitting recharge request with data:', {
-        user_id: currentUser.uid,
+      console.log('Submitting recharge request with Appwrite:', {
+        user_id: currentUser.$id,
         amount: Number(amount),
         transaction_id: transactionId || 'UPI Payment',
         payment_method: paymentMethod
       });
 
       const { data, error } = await createPaymentRequest({
-        user_id: currentUser.uid,
-        plan_id: null, // For recharge, plan_id is null
+        user_id: currentUser.$id,
+        plan_id: null,
         amount: Number(amount),
         transaction_id: transactionId || 'UPI Payment',
         payment_method: paymentMethod

@@ -1,81 +1,93 @@
 
 import { useState, useEffect } from 'react';
-import { User, onAuthStateChanged } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, db } from '@/integrations/firebase/client';
-import { ExtendedUser } from './types';
+import { Models } from 'appwrite';
+import { account, databases, DATABASE_ID, COLLECTIONS } from '@/integrations/appwrite/client';
+import { ExtendedUser, UserProfile } from './types';
 
 export const useAuthState = () => {
   const [currentUser, setCurrentUser] = useState<ExtendedUser | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    console.log('🔥 Setting up Firebase auth state listener...');
+    console.log('🔥 Setting up Appwrite auth state listener...');
     
     let mounted = true;
     
-    // Set up Firebase auth state listener
-    const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
-      if (!mounted) return;
-      
-      console.log('🔥 Auth state changed:', user?.email || 'No user');
-      
-      if (user) {
+    const checkAuthState = async () => {
+      try {
+        // Check if user has active session
+        const user = await account.get();
+        
+        if (!mounted) return;
+        
+        console.log('🔥 Auth state found user:', user.email);
         setCurrentUser(user);
         
-        const userEmail = user.email || '';
-        const isAdminUser = userEmail === 'admin@easyearn.us';
+        // Check if user is admin
+        const isAdminUser = user.email === 'admin@easyearn.us';
         setIsAdmin(isAdminUser);
         
-        // Create or update user profile in Firestore
+        // Get user profile from database
         try {
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDoc = await getDoc(userDocRef);
+          const profileResponse = await databases.listDocuments(
+            DATABASE_ID,
+            COLLECTIONS.USERS,
+            [`userId=="${user.$id}"`]
+          );
           
-          if (!userDoc.exists()) {
-            // Create new user document
-            await setDoc(userDocRef, {
-              id: user.uid,
-              email: userEmail,
-              phone: user.phoneNumber || null,
-              referralCode: null,
-              createdAt: new Date().toISOString(),
-              verified: user.emailVerified,
-              isAdmin: isAdminUser
+          if (profileResponse.documents.length > 0) {
+            const profile = profileResponse.documents[0] as any;
+            setUserProfile({
+              userId: profile.userId,
+              email: profile.email,
+              phone: profile.phone,
+              referralCode: profile.referralCode,
+              verified: profile.verified,
+              isAdmin: profile.isAdmin || isAdminUser,
+              createdAt: profile.createdAt,
+              lastLoginAt: profile.lastLoginAt
             });
-            console.log('✅ User profile created in Firestore');
-          } else {
-            // Update existing user document
-            await setDoc(userDocRef, {
-              email: userEmail,
-              verified: user.emailVerified,
-              lastLoginAt: new Date().toISOString()
-            }, { merge: true });
-            console.log('✅ User profile updated in Firestore');
+            
+            // Update last login
+            await databases.updateDocument(
+              DATABASE_ID,
+              COLLECTIONS.USERS,
+              profile.$id,
+              { lastLoginAt: new Date().toISOString() }
+            );
           }
-        } catch (error) {
-          console.error('❌ Error managing user profile:', error);
+        } catch (dbError) {
+          console.error('❌ Error fetching user profile:', dbError);
         }
-      } else {
+        
+      } catch (error) {
+        console.log('🔥 No active session found');
         setCurrentUser(null);
+        setUserProfile(null);
         setIsAdmin(false);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
-      
-      setLoading(false);
-    });
+    };
+
+    checkAuthState();
 
     return () => {
       mounted = false;
-      unsubscribe();
     };
   }, []);
 
   return {
     currentUser,
+    userProfile,
     loading,
     isAdmin,
     setCurrentUser,
+    setUserProfile,
     setIsAdmin
   };
 };

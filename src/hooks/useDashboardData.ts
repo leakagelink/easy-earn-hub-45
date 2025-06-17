@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/components/ui/use-toast";
-import { getUserInvestments, getUserTransactions } from '@/services/firestoreService';
+import { getUserInvestments, getUserTransactions } from '@/services/appwriteService';
 
 interface Investment {
   id: string;
@@ -40,19 +40,19 @@ export const useDashboardData = () => {
       let formattedInvestments: Investment[] = [];
       let formattedTransactions: Transaction[] = [];
       
-      if (!currentUser?.uid) {
+      if (!currentUser?.$id) {
         console.log('No current user found');
         return;
       }
       
       // Fetch user investments
-      const { data: investmentsData, error: investmentsError } = await getUserInvestments(currentUser.uid);
+      const { data: investmentsData, error: investmentsError } = await getUserInvestments(currentUser.$id);
 
       if (investmentsError) {
         console.error('Error fetching investments:', investmentsError);
       } else {
         formattedInvestments = investmentsData?.map(inv => ({
-          id: inv.id,
+          id: inv.$id,
           planId: inv.plan_id || '',
           amount: inv.amount || 0,
           status: inv.status || 'active',
@@ -65,13 +65,13 @@ export const useDashboardData = () => {
       }
 
       // Fetch user transactions
-      const { data: transactionsData, error: transactionsError } = await getUserTransactions(currentUser.uid);
+      const { data: transactionsData, error: transactionsError } = await getUserTransactions(currentUser.$id);
 
       if (transactionsError) {
         console.error('Error fetching transactions:', transactionsError);
       } else {
         formattedTransactions = transactionsData?.map(t => ({
-          id: t.id,
+          id: t.$id,
           type: t.type || '',
           amount: t.amount || 0,
           status: t.status || 'pending',
@@ -101,10 +101,10 @@ export const useDashboardData = () => {
   };
 
   useEffect(() => {
-    if (currentUser?.uid) {
+    if (currentUser?.$id) {
       fetchUserData();
     }
-  }, [currentUser?.uid]);
+  }, [currentUser?.$id]);
 
   const dailyProfit = investments.reduce((sum, inv) => {
     return sum + (inv.dailyProfit || 0);

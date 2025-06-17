@@ -10,25 +10,25 @@ export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
     console.error('🔥 useAuth called outside AuthProvider! Current location:', window.location.pathname);
-    console.error('🔥 AuthContext value:', context);
-    console.error('🔥 Make sure AuthProvider wraps your app properly');
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  console.log('🔥 Firebase AuthProvider rendering...');
+  console.log('🔥 Appwrite AuthProvider rendering...');
   
   const {
     currentUser,
+    userProfile,
     loading,
     isAdmin,
     setCurrentUser,
+    setUserProfile,
     setIsAdmin
   } = useAuthState();
 
-  console.log('Firebase AuthProvider state:', { 
+  console.log('Appwrite AuthProvider state:', { 
     loading, 
     currentUser: currentUser?.email || 'none',
     isAdmin
@@ -36,11 +36,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const { login, register, logout } = createAuthOperations({
     setCurrentUser,
+    setUserProfile,
     setIsAdmin
   });
 
   const value: AuthContextType = {
     currentUser,
+    userProfile,
     login,
     register,
     logout,
@@ -48,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAdmin
   };
 
-  console.log('🔥 Firebase AuthProvider providing context with value keys:', Object.keys(value));
+  console.log('🔥 Appwrite AuthProvider providing context');
 
   return (
     <AuthContext.Provider value={value}>

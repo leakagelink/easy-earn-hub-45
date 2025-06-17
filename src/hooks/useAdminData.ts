@@ -6,13 +6,13 @@ import {
   getAllInvestments, 
   getAllWithdrawals, 
   getAllTransactions 
-} from '@/services/firestoreService';
+} from '@/services/appwriteService';
 
 export const useAdminData = () => {
   const { data: paymentRequests = [], isLoading, refetch } = useQuery({
     queryKey: ['admin-payment-requests'],
     queryFn: async () => {
-      console.log('Fetching payment requests from Firebase...');
+      console.log('Fetching payment requests from Appwrite...');
       const { data, error } = await getPaymentRequests();
       
       if (error) {
@@ -30,7 +30,7 @@ export const useAdminData = () => {
   const { data: users = [] } = useQuery({
     queryKey: ['admin-users'],
     queryFn: async () => {
-      console.log('Fetching users from Firebase...');
+      console.log('Fetching users from Appwrite...');
       const { data, error } = await getAllUsers();
       
       if (error) {
@@ -48,7 +48,7 @@ export const useAdminData = () => {
   const { data: investments = [] } = useQuery({
     queryKey: ['admin-investments'],
     queryFn: async () => {
-      console.log('Fetching investments from Firebase...');
+      console.log('Fetching investments from Appwrite...');
       const { data, error } = await getAllInvestments();
       
       if (error) {
@@ -66,7 +66,7 @@ export const useAdminData = () => {
   const { data: withdrawals = [] } = useQuery({
     queryKey: ['admin-withdrawals'],
     queryFn: async () => {
-      console.log('Fetching withdrawals from Firebase...');
+      console.log('Fetching withdrawals from Appwrite...');
       const { data, error } = await getAllWithdrawals();
       
       if (error) {
@@ -84,7 +84,7 @@ export const useAdminData = () => {
   const { data: transactions = [] } = useQuery({
     queryKey: ['admin-transactions'],
     queryFn: async () => {
-      console.log('Fetching transactions from Firebase...');
+      console.log('Fetching transactions from Appwrite...');
       const { data, error } = await getAllTransactions();
       
       if (error) {

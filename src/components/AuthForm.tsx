@@ -17,20 +17,20 @@ interface AuthFormProps {
 }
 
 const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
-  console.log('🔥 Firebase AuthForm rendering with mode:', mode);
+  console.log('🔥 Appwrite AuthForm rendering with mode:', mode);
   
   // Add safety check for auth context
   let authContext;
   try {
     authContext = useAuth();
-    console.log('✅ Firebase Auth context loaded successfully');
+    console.log('✅ Appwrite Auth context loaded successfully');
   } catch (error) {
-    console.error('❌ Failed to load Firebase auth context:', error);
+    console.error('❌ Failed to load Appwrite auth context:', error);
     return (
       <div className="mx-auto w-full max-w-md p-6 bg-white rounded-lg shadow-md">
         <div className="text-center">
           <h2 className="text-xl font-bold text-red-600 mb-4">Authentication Error</h2>
-          <p className="text-gray-600">Firebase Auth system loading करने में problem हो रही है...</p>
+          <p className="text-gray-600">Appwrite Auth system loading करने में problem हो रही है...</p>
           <p className="text-sm text-gray-500 mt-2">Page refresh करके try करें</p>
           <button 
             onClick={() => window.location.reload()} 
@@ -68,11 +68,11 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('📋 Firebase form submission:', { mode, email, phone, loginMethod });
+    console.log('📋 Appwrite form submission:', { mode, email, phone, loginMethod });
     
     // Enhanced validation
-    if (!password || password.length < 6) {
-      toast({ title: "Password कम से कम 6 characters का होना चाहिए", variant: "destructive" });
+    if (!password || password.length < 8) {
+      toast({ title: "Password कम से कम 8 characters का होना चाहिए", variant: "destructive" });
       return;
     }
     
@@ -108,7 +108,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     try {
       if (mode === 'login') {
         const loginEmail = loginMethod === 'email' ? email : `${phone}@easyearn.com`;
-        console.log('🔑 Attempting Firebase login with:', loginEmail);
+        console.log('🔑 Attempting Appwrite login with:', loginEmail);
         await login(loginEmail, password);
         
         toast({ 
@@ -117,7 +117,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         });
         navigate(localStorage.getItem('selectedPlan') ? '/payment' : '/invest');
       } else {
-        console.log('📝 Attempting Firebase registration...');
+        console.log('📝 Attempting Appwrite registration...');
         console.log('📊 Registration data:', { email, phone, referralCode });
         
         await register(email, password, phone, referralCode);
@@ -131,7 +131,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         navigate('/login');
       }
     } catch (error: any) {
-      console.error('💥 Firebase auth error:', error);
+      console.error('💥 Appwrite auth error:', error);
       
       toast({
         title: mode === 'login' ? "❌ Login Failed" : "❌ Registration Failed",
@@ -192,10 +192,10 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       <div className="mt-4 text-center">
         <p className="text-xs text-green-600 font-medium">
-          🔥 Powered by Firebase - Secure & Fast
+          🚀 Powered by Appwrite - Secure & Fast
         </p>
         <p className="text-xs text-gray-500 mt-1">
-          Network issue हो तो internet connection check करें
+          European servers से fast connection
         </p>
       </div>
     </div>

@@ -1,99 +1,108 @@
 
-import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
-  signOut,
-  updateProfile,
-  connectAuthEmulator
-} from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '@/integrations/firebase/client';
-import { ExtendedUser } from './types';
+import { ID } from 'appwrite';
+import { account, databases, DATABASE_ID, COLLECTIONS } from '@/integrations/appwrite/client';
+import { ExtendedUser, UserProfile } from './types';
 
 export interface AuthOperationsParams {
   setCurrentUser: (user: ExtendedUser | null) => void;
+  setUserProfile: (profile: UserProfile | null) => void;
   setIsAdmin: (isAdmin: boolean) => void;
 }
 
-export const createAuthOperations = ({ setCurrentUser, setIsAdmin }: AuthOperationsParams) => {
+export const createAuthOperations = ({ setCurrentUser, setUserProfile, setIsAdmin }: AuthOperationsParams) => {
   
   const login = async (email: string, password: string) => {
-    console.log('🔑 Starting Firebase login for:', email);
+    console.log('🔑 Starting Appwrite login for:', email);
     
     try {
-      console.log('🚀 Attempting Firebase login...');
-      const userCredential = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
-
-      if (userCredential.user) {
-        console.log('✅ Firebase login successful for:', userCredential.user.email);
-        return userCredential;
-      } else {
-        throw new Error('Login failed - no user returned');
-      }
+      console.log('🚀 Attempting Appwrite login...');
+      
+      // Clean email
+      const cleanEmail = email.trim().toLowerCase();
+      
+      // Create session
+      const session = await account.createEmailPasswordSession(cleanEmail, password);
+      console.log('✅ Session created:', session);
+      
+      // Get user account
+      const user = await account.get();
+      console.log('✅ User account retrieved:', user.email);
+      
+      return { user, session };
     } catch (error: any) {
-      console.error('💥 Firebase login failed:', error);
+      console.error('💥 Appwrite login failed:', error);
       throw new Error(getErrorMessage(error));
     }
   };
 
   const register = async (email: string, password: string, phone: string, referralCode?: string) => {
-    console.log('📝 Starting Firebase registration for:', email);
+    console.log('📝 Starting Appwrite registration for:', email);
     
     try {
-      console.log('🚀 Attempting Firebase registration...');
-      
-      // Simple validation first
+      // Validation
       if (!email || !password || !phone) {
         throw new Error('सभी fields भरना जरूरी है।');
       }
       
-      if (password.length < 6) {
-        throw new Error('Password कम से कम 6 characters का होना चाहिए।');
+      if (password.length < 8) {
+        throw new Error('Password कम से कम 8 characters का होना चाहिए।');
       }
       
-      const userCredential = await createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+      const cleanEmail = email.trim().toLowerCase();
+      const cleanPhone = phone.trim();
       
-      // Update user profile with additional info
-      if (userCredential.user) {
-        await updateProfile(userCredential.user, {
-          displayName: email.split('@')[0]
-        });
-        
-        // Create user document in Firestore
-        await setDoc(doc(db, 'users', userCredential.user.uid), {
-          id: userCredential.user.uid,
-          email: email.trim().toLowerCase(),
-          phone: phone.trim(),
-          referralCode: referralCode?.trim() || '',
-          createdAt: new Date().toISOString(),
-          verified: false,
-          isAdmin: false
-        });
-      }
-
-      if (userCredential.user) {
-        console.log('✅ Firebase registration successful for:', userCredential.user.email);
-        return userCredential;
-      } else {
-        throw new Error('Registration failed - no user returned');
-      }
+      console.log('🚀 Creating Appwrite account...');
+      
+      // Create account
+      const user = await account.create(
+        ID.unique(),
+        cleanEmail,
+        password,
+        cleanEmail.split('@')[0] // name from email
+      );
+      
+      console.log('✅ Account created:', user.email);
+      
+      // Create user profile in database
+      const userProfile: UserProfile = {
+        userId: user.$id,
+        email: cleanEmail,
+        phone: cleanPhone,
+        referralCode: referralCode?.trim() || '',
+        verified: false,
+        isAdmin: cleanEmail === 'admin@easyearn.us',
+        createdAt: new Date().toISOString()
+      };
+      
+      await databases.createDocument(
+        DATABASE_ID,
+        COLLECTIONS.USERS,
+        ID.unique(),
+        userProfile
+      );
+      
+      console.log('✅ User profile created in database');
+      
+      return { user };
     } catch (error: any) {
-      console.error('💥 Firebase registration failed:', error);
+      console.error('💥 Appwrite registration failed:', error);
       throw new Error(getErrorMessage(error));
     }
   };
 
   const logout = async () => {
-    console.log('🚪 Starting Firebase logout...');
+    console.log('🚪 Starting Appwrite logout...');
     try {
-      await signOut(auth);
+      await account.deleteSession('current');
       setCurrentUser(null);
+      setUserProfile(null);
       setIsAdmin(false);
-      console.log('✅ Firebase logout successful');
+      console.log('✅ Appwrite logout successful');
       window.location.href = '/';
     } catch (error) {
-      console.error('❌ Firebase logout error:', error);
+      console.error('❌ Appwrite logout error:', error);
       setCurrentUser(null);
+      setUserProfile(null);
       setIsAdmin(false);
       window.location.href = '/';
     }
@@ -105,35 +114,38 @@ export const createAuthOperations = ({ setCurrentUser, setIsAdmin }: AuthOperati
 const getErrorMessage = (error: any): string => {
   if (!error) return 'Unknown error occurred';
   
-  const code = error.code || '';
+  const code = error.code || error.type || '';
   const message = error.message || error.toString();
   
   console.log('🔍 Error details:', { code, message });
   
-  // Firebase Auth specific errors
+  // Appwrite specific errors
   switch (code) {
-    case 'auth/network-request-failed':
+    case 'network_failure':
+    case 'network_request_failed':
       return 'Internet connection की समस्या है। Network check करें और फिर से try करें।';
     
-    case 'auth/invalid-credential':
-    case 'auth/user-not-found':
-    case 'auth/wrong-password':
+    case 'user_invalid_credentials':
+    case 'user_not_found':
       return 'गलत email या password है।';
     
-    case 'auth/email-already-in-use':
+    case 'user_already_exists':
       return 'यह email पहले से registered है। Login करने की कोशिश करें।';
     
-    case 'auth/weak-password':
-      return 'Password कम से कम 6 अक्षर का होना चाहिए।';
+    case 'user_password_mismatch':
+      return 'Password गलत है।';
     
-    case 'auth/invalid-email':
+    case 'user_invalid_format':
       return 'सही email address डालें।';
     
-    case 'auth/too-many-requests':
-      return 'बहुत ज्यादा attempts हो गए हैं। कुछ देर बाद कोशिश करें।';
+    case 'user_password_recently_used':
+      return 'यह password पहले इस्तेमाल हो चुका है।';
     
-    case 'auth/operation-not-allowed':
-      return 'Email/Password authentication enabled नहीं है।';
+    case 'user_password_personal_data':
+      return 'Password में personal information नहीं होनी चाहिए।';
+    
+    case 'general_rate_limit_exceeded':
+      return 'बहुत ज्यादा attempts हो गए हैं। कुछ देर बाद कोशिश करें।';
     
     default:
       // Network errors
