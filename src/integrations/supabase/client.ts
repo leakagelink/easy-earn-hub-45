@@ -19,10 +19,29 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   },
   global: {
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    fetch: (url, options = {}) => {
+      console.log('Supabase fetch:', url);
+      return fetch(url, {
+        ...options,
+        timeout: 10000, // 10 second timeout
+      });
     }
   },
   db: {
     schema: 'public'
   }
+});
+
+// Add connection test
+supabase.auth.getSession().then(({ data, error }) => {
+  if (error) {
+    console.error('Supabase connection test failed:', error);
+  } else {
+    console.log('Supabase connected successfully');
+  }
+}).catch(err => {
+  console.error('Supabase connection error:', err);
 });

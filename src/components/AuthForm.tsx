@@ -70,70 +70,51 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         await login(loginEmail, password);
         
         toast({
-          title: "Login successful",
-          description: "Welcome back!",
+          title: "Login successful!",
+          description: "Welcome back! Redirecting you now...",
         });
         
-        // Check if user was trying to buy a plan
-        const selectedPlan = localStorage.getItem('selectedPlan');
-        if (selectedPlan) {
-          console.log('Redirecting to payment page with plan:', selectedPlan);
-          navigate('/payment');
-        } else {
-          console.log('Redirecting to invest page');
-          navigate('/invest');
-        }
+        // Small delay to show success message
+        setTimeout(() => {
+          // Check if user was trying to buy a plan
+          const selectedPlan = localStorage.getItem('selectedPlan');
+          if (selectedPlan) {
+            console.log('Redirecting to payment page with plan:', selectedPlan);
+            navigate('/payment');
+          } else {
+            console.log('Redirecting to invest page');
+            navigate('/invest');
+          }
+        }, 1000);
+        
       } else {
         console.log('Attempting registration with:', { email, phone, referralCode });
         
-        // Add retry mechanism for registration
-        let attempts = 0;
-        const maxAttempts = 3;
-        
-        while (attempts < maxAttempts) {
-          try {
-            await register(email, password, phone, referralCode);
-            break; // Success, exit loop
-          } catch (error: any) {
-            attempts++;
-            console.log(`Registration attempt ${attempts} failed:`, error.message);
-            
-            if (attempts >= maxAttempts) {
-              throw error; // Re-throw the last error
-            }
-            
-            // Wait before retry (exponential backoff)
-            await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
-          }
-        }
+        await register(email, password, phone, referralCode);
         
         toast({
-          title: "Registration successful",
-          description: "Please check your email to confirm your account!",
+          title: "Registration successful!",
+          description: "Please check your email to confirm your account before logging in.",
         });
         
-        // If a plan was selected, go to payment after email confirmation
+        // If a plan was selected, save it for after email confirmation
         if (selectedPlan) {
           localStorage.setItem('selectedPlan', selectedPlan);
           console.log('Plan saved for after email confirmation:', selectedPlan);
         }
         
-        // Redirect to login page to ask user to check email
-        navigate('/login');
+        // Small delay before redirect
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
       }
+      
     } catch (error: any) {
       console.error('Auth error:', error);
       
-      let errorMessage = error.message || "Something went wrong. Please try again.";
-      
-      // Additional error handling for common issues
-      if (errorMessage.includes('fetch')) {
-        errorMessage = "Network connection error. Please check your internet connection and try again.";
-      }
-      
       toast({
         title: mode === 'login' ? "Login failed" : "Registration failed",
-        description: errorMessage,
+        description: error.message || "Something went wrong. Please try again.",
         variant: "destructive"
       });
     } finally {

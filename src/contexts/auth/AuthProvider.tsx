@@ -24,31 +24,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
 
   const login = async (email: string, password: string) => {
-    await handleLogin(email, password, setIsAdmin);
+    console.log('AuthProvider: Starting login process for:', email);
+    try {
+      await handleLogin(email, password, setIsAdmin);
+      console.log('AuthProvider: Login successful');
+    } catch (error) {
+      console.error('AuthProvider: Login failed:', error);
+      throw error;
+    }
   };
 
   const register = async (email: string, password: string, phone: string, referralCode?: string) => {
-    await handleRegister(email, password, phone, referralCode);
+    console.log('AuthProvider: Starting registration process for:', email);
+    try {
+      await handleRegister(email, password, phone, referralCode);
+      console.log('AuthProvider: Registration successful');
+    } catch (error) {
+      console.error('AuthProvider: Registration failed:', error);
+      throw error;
+    }
   };
 
   const logout = async () => {
-    await handleLogout(setIsAdmin);
+    console.log('AuthProvider: Starting logout process');
+    try {
+      await handleLogout(setIsAdmin);
+      console.log('AuthProvider: Logout successful');
+    } catch (error) {
+      console.error('AuthProvider: Logout failed:', error);
+      throw error;
+    }
   };
 
   useEffect(() => {
     console.log('AuthProvider: Initializing auth state...');
     
     let mounted = true;
+    let authListener: any = null;
     
     const initializeAuth = async () => {
       try {
-        // Get initial session
+        console.log('AuthProvider: Getting initial session...');
         const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (!mounted) return;
+        if (!mounted) {
+          console.log('AuthProvider: Component unmounted, aborting initialization');
+          return;
+        }
         
         if (error) {
           console.error('AuthProvider: Error getting initial session:', error);
+          setSession(null);
+          setCurrentUser(null);
+          setIsAdmin(false);
         } else {
           console.log('AuthProvider: Initial session loaded:', session?.user?.email || 'No user');
           
@@ -57,12 +85,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           if (session?.user) {
             const userEmail = session.user.email || '';
-            const userName = session.user.user_metadata?.name || 'User';
+            const userName = session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User';
             const isAdminUser = checkIsAdmin(userEmail);
             
+            console.log('AuthProvider: Setting user storage for:', userEmail, 'isAdmin:', isAdminUser);
             setUserStorage(userEmail, userName, isAdminUser);
             setIsAdmin(isAdminUser);
           } else {
+            console.log('AuthProvider: No session found, clearing storage');
             clearUserStorage();
             setIsAdmin(false);
           }
@@ -76,19 +106,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } finally {
         if (mounted) {
+          console.log('AuthProvider: Auth initialization complete');
           setLoading(false);
           setIsInitialized(true);
         }
       }
     };
 
-    // Initialize auth state
-    initializeAuth();
-
-    // Listen for auth changes
+    // Set up auth state listener first
+    console.log('AuthProvider: Setting up auth state listener...');
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        if (!mounted) return;
+        if (!mounted) {
+          console.log('AuthProvider: Component unmounted, ignoring auth state change');
+          return;
+        }
         
         console.log('AuthProvider: Auth state changed:', event, session?.user?.email || 'No user');
         
@@ -97,32 +129,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (session?.user) {
           const userEmail = session.user.email || '';
-          const userName = session.user.user_metadata?.name || 'User';
+          const userName = session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User';
           const isAdminUser = checkIsAdmin(userEmail);
           
+          console.log('AuthProvider: Auth state change - setting user storage for:', userEmail);
           setUserStorage(userEmail, userName, isAdminUser);
           setIsAdmin(isAdminUser);
         } else {
+          console.log('AuthProvider: Auth state change - no user, clearing storage');
           clearUserStorage();
           setIsAdmin(false);
         }
       }
     );
+    
+    authListener = subscription;
+
+    // Initialize auth state after setting up listener
+    initializeAuth();
 
     return () => {
       console.log('AuthProvider: Cleaning up auth listener');
       mounted = false;
-      subscription.unsubscribe();
+      if (authListener) {
+        authListener.unsubscribe();
+      }
     };
   }, []);
 
-  // Don't render children until auth is initialized
+  // Show loading screen until auth is fully initialized
   if (!isInitialized) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-easyearn-purple mx-auto mb-2"></div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-easyearn-purple mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">Loading authentication...</p>
         </div>
       </div>
     );
