@@ -55,37 +55,50 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const navigate = useNavigate();
   const { login, register } = authContext;
   
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+  
+  const validatePhone = (phone: string) => {
+    const phoneRegex = /^[0-9]{10}$/;
+    return phoneRegex.test(phone.replace(/\D/g, ''));
+  };
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     console.log('📋 Firebase form submission:', { mode, email, phone, loginMethod });
     
-    // Validation
-    if (!password) {
-      toast({ title: "Password जरूरी है", variant: "destructive" });
+    // Enhanced validation
+    if (!password || password.length < 6) {
+      toast({ title: "Password कम से कम 6 characters का होना चाहिए", variant: "destructive" });
       return;
     }
     
     if (mode === 'login') {
-      if (loginMethod === 'email' && !email) {
-        toast({ title: "Email जरूरी है", variant: "destructive" });
-        return;
-      }
-      if (loginMethod === 'phone' && !phone) {
-        toast({ title: "Phone number जरूरी है", variant: "destructive" });
-        return;
+      if (loginMethod === 'email') {
+        if (!email || !validateEmail(email)) {
+          toast({ title: "सही email address डालें", variant: "destructive" });
+          return;
+        }
+      } else {
+        if (!phone || !validatePhone(phone)) {
+          toast({ title: "सही phone number डालें (10 digits)", variant: "destructive" });
+          return;
+        }
       }
     } else {
-      if (!email || !phone) {
-        toast({ title: "सभी fields जरूरी हैं", variant: "destructive" });
+      if (!email || !validateEmail(email)) {
+        toast({ title: "सही email address डालें", variant: "destructive" });
+        return;
+      }
+      if (!phone || !validatePhone(phone)) {
+        toast({ title: "सही phone number डालें (10 digits)", variant: "destructive" });
         return;
       }
       if (password !== confirmPassword) {
         toast({ title: "Passwords match नहीं हो रहे", variant: "destructive" });
-        return;
-      }
-      if (password.length < 6) {
-        toast({ title: "Password कम से कम 6 अक्षर का होना चाहिए", variant: "destructive" });
         return;
       }
     }
@@ -100,16 +113,18 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         
         toast({ 
           title: "✅ Login successful!",
-          description: "Firebase के साथ आपका login हो गया है"
+          description: "आपका login हो गया है"
         });
         navigate(localStorage.getItem('selectedPlan') ? '/payment' : '/invest');
       } else {
         console.log('📝 Attempting Firebase registration...');
+        console.log('📊 Registration data:', { email, phone, referralCode });
+        
         await register(email, password, phone, referralCode);
         
         toast({ 
           title: "✅ Registration successful!", 
-          description: "Firebase के साथ account बन गया है" 
+          description: "Account बन गया है। अब login करें।" 
         });
         
         if (selectedPlan) localStorage.setItem('selectedPlan', selectedPlan);
@@ -120,7 +135,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       toast({
         title: mode === 'login' ? "❌ Login Failed" : "❌ Registration Failed",
-        description: error.message || 'कुछ गलत हुआ है। फिर से कोशिश करें।',
+        description: error.message || 'कुछ गलत हुआ है। Internet connection check करें।',
         variant: "destructive"
       });
     } finally {
@@ -177,7 +192,10 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       <div className="mt-4 text-center">
         <p className="text-xs text-green-600 font-medium">
-          🔥 Powered by Firebase - Fast & Reliable
+          🔥 Powered by Firebase - Secure & Fast
+        </p>
+        <p className="text-xs text-gray-500 mt-1">
+          Network issue हो तो internet connection check करें
         </p>
       </div>
     </div>

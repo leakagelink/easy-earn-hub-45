@@ -1,7 +1,7 @@
 
 import { initializeApp } from "firebase/app";
-import { getAuth, Auth } from "firebase/auth";
-import { getFirestore, Firestore } from "firebase/firestore";
+import { getAuth, Auth, connectAuthEmulator } from "firebase/auth";
+import { getFirestore, Firestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getAnalytics } from "firebase/analytics";
 
 const firebaseConfig = {
@@ -25,12 +25,24 @@ export const auth: Auth = getAuth(app);
 // Initialize Cloud Firestore and get a reference to the service
 export const db: Firestore = getFirestore(app);
 
-// Initialize Analytics
-export const analytics = getAnalytics(app);
+// Initialize Analytics only if running in browser
+let analytics;
+try {
+  if (typeof window !== 'undefined') {
+    analytics = getAnalytics(app);
+  }
+} catch (error) {
+  console.log('Analytics initialization skipped:', error);
+}
+
+export { analytics };
 
 console.log('✅ Firebase initialized successfully');
 
 // Enable network persistence for better offline experience
 auth.useDeviceLanguage();
+
+// Set custom timeout for better reliability
+auth.settings.appVerificationDisabledForTesting = false;
 
 export default app;

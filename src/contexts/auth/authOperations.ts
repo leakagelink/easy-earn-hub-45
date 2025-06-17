@@ -3,7 +3,8 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   signOut,
-  updateProfile
+  updateProfile,
+  connectAuthEmulator
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/integrations/firebase/client';
@@ -14,42 +15,18 @@ export interface AuthOperationsParams {
   setIsAdmin: (isAdmin: boolean) => void;
 }
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 export const createAuthOperations = ({ setCurrentUser, setIsAdmin }: AuthOperationsParams) => {
   
-  const retryOperation = async (operation: () => Promise<any>, maxRetries = 3) => {
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        console.log(`🔄 Attempt ${attempt}/${maxRetries}`);
-        const result = await operation();
-        return result;
-      } catch (error: any) {
-        console.error(`❌ Attempt ${attempt} failed:`, error.message);
-        
-        if (attempt === maxRetries) {
-          throw error;
-        }
-        
-        // Wait before retry
-        await delay(1000 * attempt);
-      }
-    }
-  };
-
   const login = async (email: string, password: string) => {
     console.log('🔑 Starting Firebase login for:', email);
     
     try {
-      const result = await retryOperation(async () => {
-        console.log('🚀 Attempting Firebase login...');
-        const userCredential = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
-        return userCredential;
-      });
+      console.log('🚀 Attempting Firebase login...');
+      const userCredential = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
 
-      if (result.user) {
-        console.log('✅ Firebase login successful for:', result.user.email);
-        return result;
+      if (userCredential.user) {
+        console.log('✅ Firebase login successful for:', userCredential.user.email);
+        return userCredential;
       } else {
         throw new Error('Login failed - no user returned');
       }
@@ -63,34 +40,40 @@ export const createAuthOperations = ({ setCurrentUser, setIsAdmin }: AuthOperati
     console.log('📝 Starting Firebase registration for:', email);
     
     try {
-      const result = await retryOperation(async () => {
-        console.log('🚀 Attempting Firebase registration...');
-        const userCredential = await createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+      console.log('🚀 Attempting Firebase registration...');
+      
+      // Simple validation first
+      if (!email || !password || !phone) {
+        throw new Error('सभी fields भरना जरूरी है।');
+      }
+      
+      if (password.length < 6) {
+        throw new Error('Password कम से कम 6 characters का होना चाहिए।');
+      }
+      
+      const userCredential = await createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+      
+      // Update user profile with additional info
+      if (userCredential.user) {
+        await updateProfile(userCredential.user, {
+          displayName: email.split('@')[0]
+        });
         
-        // Update user profile with additional info
-        if (userCredential.user) {
-          await updateProfile(userCredential.user, {
-            displayName: email.split('@')[0]
-          });
-          
-          // Create user document in Firestore
-          await setDoc(doc(db, 'users', userCredential.user.uid), {
-            id: userCredential.user.uid,
-            email: email.trim().toLowerCase(),
-            phone: phone.trim(),
-            referralCode: referralCode?.trim() || '',
-            createdAt: new Date().toISOString(),
-            verified: false,
-            isAdmin: false
-          });
-        }
-        
-        return userCredential;
-      });
+        // Create user document in Firestore
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+          id: userCredential.user.uid,
+          email: email.trim().toLowerCase(),
+          phone: phone.trim(),
+          referralCode: referralCode?.trim() || '',
+          createdAt: new Date().toISOString(),
+          verified: false,
+          isAdmin: false
+        });
+      }
 
-      if (result.user) {
-        console.log('✅ Firebase registration successful for:', result.user.email);
-        return result;
+      if (userCredential.user) {
+        console.log('✅ Firebase registration successful for:', userCredential.user.email);
+        return userCredential;
       } else {
         throw new Error('Registration failed - no user returned');
       }
@@ -125,8 +108,13 @@ const getErrorMessage = (error: any): string => {
   const code = error.code || '';
   const message = error.message || error.toString();
   
+  console.log('🔍 Error details:', { code, message });
+  
   // Firebase Auth specific errors
   switch (code) {
+    case 'auth/network-request-failed':
+      return 'Internet connection की समस्या है। Network check करें और फिर से try करें।';
+    
     case 'auth/invalid-credential':
     case 'auth/user-not-found':
     case 'auth/wrong-password':
@@ -141,21 +129,22 @@ const getErrorMessage = (error: any): string => {
     case 'auth/invalid-email':
       return 'सही email address डालें।';
     
-    case 'auth/network-request-failed':
-      return 'Internet connection की समस्या है। कुछ देर बाद कोशिश करें।';
-    
     case 'auth/too-many-requests':
       return 'बहुत ज्यादा attempts हो गए हैं। कुछ देर बाद कोशिश करें।';
+    
+    case 'auth/operation-not-allowed':
+      return 'Email/Password authentication enabled नहीं है।';
     
     default:
       // Network errors
       if (message.includes('Failed to fetch') || 
           message.includes('NetworkError') || 
           message.includes('timeout') ||
-          message.includes('Connection')) {
-        return 'Internet connection की समस्या है। कुछ देर बाद कोशिश करें।';
+          message.includes('Connection') ||
+          message.includes('CORS')) {
+        return 'Network connection की समस्या है। Internet check करें।';
       }
       
-      return message;
+      return message || 'कुछ गलत हुआ है। फिर से कोशिश करें।';
   }
 };
