@@ -19,7 +19,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
     },
-    fetch: (url, options = {}) => {
+    fetch: (url: string, options: RequestInit = {}) => {
       console.log('Supabase fetch:', url);
       return fetch(url, {
         ...options,
