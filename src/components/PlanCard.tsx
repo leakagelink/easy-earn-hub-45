@@ -25,33 +25,54 @@ const PlanCard: React.FC<PlanCardProps> = ({
 }) => {
   const navigate = useNavigate();
   
-  // Safely access auth context with fallback
-  let currentUser = null;
-  try {
-    const { useAuth } = require('@/contexts/auth');
-    const auth = useAuth();
-    currentUser = auth.currentUser;
-  } catch (error) {
-    console.log('Auth context not available, treating user as not logged in');
-    currentUser = null;
-  }
+  // Safe auth context access with proper fallback detection
+  const getCurrentUser = () => {
+    try {
+      // Try to get auth context
+      const { useAuth } = require('@/contexts/auth');
+      const auth = useAuth();
+      return auth.currentUser;
+    } catch (error) {
+      console.log('Auth context not available, checking for fallback session...');
+      
+      // Check fallback auth system
+      try {
+        const { FallbackAuthSystem } = require('@/utils/fallbackAuth');
+        const fallbackSession = FallbackAuthSystem.getCurrentSession();
+        return fallbackSession ? fallbackSession.user : null;
+      } catch (fallbackError) {
+        console.log('Fallback auth also not available');
+        return null;
+      }
+    }
+  };
 
   const handleChoosePlan = () => {
+    console.log('Plan selection started for plan:', id);
+    
     // Store selected plan in localStorage
-    localStorage.setItem('selectedPlan', JSON.stringify({
+    const planData = {
       id, 
       name, 
       price, 
       dailyProfit: daily_profit, 
       validityDays: validity_days, 
       totalIncome: total_income
-    }));
+    };
+    
+    localStorage.setItem('selectedPlan', JSON.stringify(planData));
+    console.log('Plan data stored:', planData);
+
+    const currentUser = getCurrentUser();
+    console.log('Current user status:', currentUser ? 'Logged in' : 'Not logged in');
 
     if (currentUser) {
-      // User is logged in, go to payment page
+      // User is logged in, go directly to payment page
+      console.log('Redirecting logged in user to payment page');
       navigate('/payment');
     } else {
       // User is not logged in, go to register page with plan ID
+      console.log('Redirecting non-logged user to register page');
       navigate(`/register?plan=${id}`);
     }
   };
