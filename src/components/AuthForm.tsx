@@ -36,27 +36,11 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     
     console.log('Form submission started:', { mode, loginMethod, email, phone });
     
-    // Enhanced network connectivity check
+    // Basic network connectivity check only
     if (!navigator.onLine) {
       toast({
         title: "No Internet Connection",
         description: "Please check your network connection and try again.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Additional Firebase service availability check
-    try {
-      await fetch('https://identitytoolkit.googleapis.com/v1/projects', { 
-        method: 'HEAD',
-        mode: 'no-cors'
-      });
-    } catch (error) {
-      console.warn('Firebase service check failed:', error);
-      toast({
-        title: "Service Unavailable",
-        description: "Authentication service is temporarily unavailable. Please try again in a few moments.",
         variant: "destructive"
       });
       return;
@@ -130,11 +114,6 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       let errorTitle = mode === 'login' ? "Login failed" : "Registration failed";
       let errorDescription = error.message || "Something went wrong. Please try again.";
-      
-      // Provide more specific guidance for common issues
-      if (error.message.includes('connection') || error.message.includes('network')) {
-        errorDescription += " If the problem persists, please check if you're behind a firewall or try again later.";
-      }
       
       toast({
         title: errorTitle,

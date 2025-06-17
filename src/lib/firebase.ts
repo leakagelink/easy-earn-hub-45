@@ -22,10 +22,10 @@ export const auth = getAuth(app);
 // Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
 
-// Enable persistence for better offline support
+// Enable network for better connectivity (but don't force it)
 import { enableNetwork } from 'firebase/firestore';
 enableNetwork(db).catch((error) => {
-  console.warn('Failed to enable Firestore network:', error);
+  console.warn('Failed to enable Firestore network (this is normal in some environments):', error);
 });
 
 export default app;

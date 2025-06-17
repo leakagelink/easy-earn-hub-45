@@ -5,25 +5,6 @@ import { auth, db } from '@/lib/firebase';
 import { getFirebaseErrorMessage } from './errorUtils';
 import { setUserStorage, clearUserStorage, checkIsAdmin } from './storageUtils';
 
-// Add network connectivity check
-const checkNetworkConnectivity = async () => {
-  if (!navigator.onLine) {
-    throw new Error('No internet connection. Please check your network and try again.');
-  }
-  
-  // Additional connectivity check by trying to reach Firebase
-  try {
-    await fetch('https://www.gstatic.com/hostedimg/382a91be1ed04f9e_large', { 
-      method: 'HEAD',
-      mode: 'no-cors',
-      cache: 'no-cache'
-    });
-  } catch (error) {
-    console.warn('Network connectivity check failed:', error);
-    throw new Error('Connection issue detected. Please check your internet connection and try again.');
-  }
-};
-
 export const handleLogin = async (
   email: string, 
   password: string,
@@ -31,9 +12,6 @@ export const handleLogin = async (
 ) => {
   try {
     console.log('Starting login process for:', email);
-    
-    // Check network connectivity
-    await checkNetworkConnectivity();
     
     console.log('Attempting login with Firebase...');
     const userCredential = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
@@ -74,9 +52,6 @@ export const handleRegister = async (
     console.log('Phone:', phone);
     console.log('Referral Code:', referralCode);
     
-    // Check network connectivity first
-    await checkNetworkConnectivity();
-    
     // Validate input
     if (!email || !password || !phone) {
       throw new Error('All required fields must be filled');
@@ -92,12 +67,12 @@ export const handleRegister = async (
       throw new Error('Please enter a valid email address');
     }
     
-    console.log('Network check passed, attempting registration with Firebase...');
+    console.log('Validation passed, attempting registration with Firebase...');
     
     // Add timeout to the registration request
     const registrationPromise = createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
     const timeoutPromise = new Promise<never>((_, reject) => 
-      setTimeout(() => reject(new Error('Registration timeout. Please try again.')), 30000)
+      setTimeout(() => reject(new Error('Registration is taking longer than expected. Please try again.')), 30000)
     );
     
     const userCredential: UserCredential = await Promise.race([registrationPromise, timeoutPromise]);

@@ -8,7 +8,12 @@ export const getFirebaseErrorMessage = (errorCode: string) => {
   
   // Handle network connectivity issues first
   if (errorCode.includes('network') || errorCode.includes('fetch') || errorCode.includes('connection')) {
-    return 'Connection error. Please check your internet connection and try again. If the problem persists, the service may be temporarily unavailable.';
+    return 'Network connection issue. Please check your internet connection and try again.';
+  }
+  
+  // Handle timeout issues
+  if (errorCode.includes('timeout') || errorCode.includes('taking longer')) {
+    return 'Request timed out. Please check your connection and try again.';
   }
   
   // Handle specific Firebase authentication errors
@@ -42,23 +47,19 @@ export const getFirebaseErrorMessage = (errorCode: string) => {
       return 'Email/password registration is not enabled. Please contact support.';
     
     case 'auth/configuration-not-found':
-      return 'Firebase configuration error. Please contact support.';
-    
     case 'auth/app-deleted':
-      return 'Application configuration error. Please contact support.';
-    
     case 'auth/invalid-api-key':
-      return 'Invalid API configuration. Please contact support.';
+      return 'Service configuration error. Please contact support.';
     
     default:
       // Handle fetch errors and other network issues
       if (errorCode.includes('Failed to fetch') || errorCode.includes('TypeError')) {
-        return 'Unable to connect to authentication service. Please check your internet connection and try again.';
+        return 'Unable to connect to authentication service. Please try again in a few moments.';
       }
       
-      // Return a generic message for unknown errors
+      // Return a more user-friendly message for unknown errors
       return errorCode.includes('auth/') 
         ? 'Authentication error. Please try again or contact support if the problem persists.'
-        : errorCode || 'An error occurred. Please try again.';
+        : 'Service temporarily unavailable. Please try again in a few moments.';
   }
 };
