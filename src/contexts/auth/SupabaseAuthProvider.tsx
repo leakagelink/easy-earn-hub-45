@@ -83,16 +83,11 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     console.log('📝 Supabase registration attempt for:', email);
     
     try {
-      // Sign out any existing session first
-      await supabase.auth.signOut();
-      
-      const redirectUrl = window.location.origin;
-      
+      // Simplified registration - no sign out, no emailRedirectTo
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
         options: {
-          emailRedirectTo: redirectUrl,
           data: {
             phone: phone.trim(),
             referral_code: referralCode?.trim() || '',
@@ -151,23 +146,23 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
 }
 
 const getErrorMessage = (error: any): string => {
-  if (!error) return 'Unknown error occurred';
+  if (!error) return 'कुछ तकनीकी समस्या है।';
   
   const message = error.message || error.toString();
   
   console.log('🔍 Error details:', { message, error });
   
-  // Supabase specific errors with Hindi messages
+  // Simplified error messages
   if (message.includes('Invalid login credentials')) {
     return 'गलत email या password है।';
   }
   
   if (message.includes('Email not confirmed')) {
-    return 'Registration successful! Login करने के लिए तैयार हैं।';
+    return 'Registration successful! अब login कर सकते हैं।';
   }
   
   if (message.includes('User already registered') || message.includes('already registered')) {
-    return 'यह email पहले से registered है। Login करने की कोशिश करें।';
+    return 'यह email पहले से registered है। Login करें।';
   }
   
   if (message.includes('Password should be at least')) {
@@ -186,10 +181,5 @@ const getErrorMessage = (error: any): string => {
     return 'बहुत जल्दी try कर रहे हैं। 5 मिनट बाद कोशिश करें।';
   }
   
-  // Network related errors
-  if (message.includes('Failed to fetch') || message.includes('Network') || message.includes('fetch')) {
-    return 'कुछ तकनीकी समस्या है। फिर से कोशिश करें।';
-  }
-  
-  return 'Registration/Login में कोई समस्या है। फिर से कोशिश करें।';
+  return 'Registration में कोई समस्या है। फिर से कोशिश करें।';
 }

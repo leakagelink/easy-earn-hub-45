@@ -83,26 +83,22 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     try {
       if (mode === 'login') {
         const loginEmail = loginMethod === 'email' ? email : `${phone}@easyearn.com`;
-        console.log('🔑 Attempting Supabase login with:', loginEmail);
+        console.log('🔑 Attempting login with:', loginEmail);
         await login(loginEmail, password);
         
         navigate('/invest');
       } else {
-        console.log('📝 Attempting Supabase registration...');
+        console.log('📝 Attempting registration...');
         
         await register(email, password, phone, referralCode);
         
-        toast({
-          title: "✅ Registration Successful!",
-          description: "Account बन गया! Dashboard पर जा रहे हैं।",
-        });
-        
+        // Wait a moment then navigate
         setTimeout(() => {
           navigate('/invest');
-        }, 2000);
+        }, 1500);
       }
     } catch (error: any) {
-      console.error('💥 Supabase Auth error:', error);
+      console.error('💥 Auth error:', error);
       
       toast({
         title: mode === 'login' ? "❌ Login Failed" : "❌ Registration Failed",
@@ -163,10 +159,10 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       <div className="mt-4 text-center">
         <p className="text-xs text-green-600 font-medium">
-          ✅ Supabase Authentication System
+          ✅ Optimized Supabase Authentication
         </p>
         <p className="text-xs text-gray-500 mt-1">
-          Secure and reliable connectivity - No network issues
+          Simplified network configuration for better reliability
         </p>
       </div>
     </div>

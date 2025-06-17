@@ -7,56 +7,23 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
-    storage: localStorage,
+    storage: sessionStorage,
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: false,
     flowType: 'pkce'
-  },
-  global: {
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-      'Cache-Control': 'no-cache'
-    },
-    fetch: (url, options = {}) => {
-      console.log('🌐 Supabase fetch:', url);
-      return fetch(url, {
-        ...options,
-        signal: AbortSignal.timeout(15000) // 15 second timeout
-      });
-    }
   }
 })
 
-// Enhanced connection test with multiple checks
+// Simplified connection test
 export const testSupabaseConnection = async () => {
   try {
     console.log('🔍 Testing Supabase connection...');
     
-    // Test 1: Basic health check
-    const healthResponse = await fetch(`${SUPABASE_URL}/rest/v1/`, {
-      method: 'HEAD',
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-      },
-      signal: AbortSignal.timeout(10000)
-    });
+    const { data, error } = await supabase.auth.getSession();
     
-    if (!healthResponse.ok) {
-      throw new Error(`Health check failed: ${healthResponse.status}`);
-    }
-    
-    // Test 2: Auth endpoint check
-    const authResponse = await fetch(`${SUPABASE_URL}/auth/v1/settings`, {
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-      },
-      signal: AbortSignal.timeout(10000)
-    });
-    
-    if (!authResponse.ok) {
-      throw new Error(`Auth endpoint failed: ${authResponse.status}`);
+    if (error) {
+      throw error;
     }
     
     console.log('✅ Supabase connection successful');
@@ -70,45 +37,3 @@ export const testSupabaseConnection = async () => {
     };
   }
 }
-
-// Network diagnostics function
-export const checkNetworkHealth = async () => {
-  const results = {
-    internet: false,
-    supabase: false,
-    dns: false,
-    details: {} as any
-  };
-  
-  try {
-    // Check internet connectivity
-    const googleTest = await fetch('https://www.google.com/favicon.ico', {
-      mode: 'no-cors',
-      signal: AbortSignal.timeout(5000)
-    });
-    results.internet = true;
-    results.details.google = 'Connected';
-  } catch (error) {
-    results.details.google = 'Failed';
-    console.log('Internet check failed');
-  }
-  
-  try {
-    // Check DNS resolution
-    const dnsTest = await fetch('https://1.1.1.1/', {
-      mode: 'no-cors',
-      signal: AbortSignal.timeout(5000)
-    });
-    results.dns = true;
-    results.details.dns = 'Working';
-  } catch (error) {
-    results.details.dns = 'Failed';
-  }
-  
-  // Check Supabase
-  const supabaseTest = await testSupabaseConnection();
-  results.supabase = supabaseTest.success;
-  results.details.supabase = supabaseTest.success ? 'Connected' : supabaseTest.error;
-  
-  return results;
-};
