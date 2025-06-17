@@ -10,7 +10,9 @@ import { User, Mail, Phone, Key } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/auth";
-import { supabase } from '@/integrations/supabase/client';
+import { updatePassword } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '@/integrations/firebase/client';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -48,19 +50,13 @@ const Profile = () => {
     try {
       setIsLoadingProfile(true);
       
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', currentUser?.id)
-        .single();
+      const userDocRef = doc(db, 'users', currentUser!.uid);
+      const userDoc = await getDoc(userDocRef);
 
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-
-      if (profile) {
-        setEmail(profile.email || '');
-        setPhone(profile.phone || '');
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        setEmail(userData.email || '');
+        setPhone(userData.phone || '');
       } else {
         // Set from auth user if profile doesn't exist yet
         setEmail(currentUser?.email || '');
@@ -92,19 +88,13 @@ const Profile = () => {
     setIsUpdatingProfile(true);
     
     try {
-      // Update or create profile in Supabase
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: currentUser?.id,
-          email,
-          phone,
-          updated_at: new Date().toISOString(),
-        });
-
-      if (error) {
-        throw error;
-      }
+      // Update profile in Firestore
+      const userDocRef = doc(db, 'users', currentUser!.uid);
+      await setDoc(userDocRef, {
+        email,
+        phone,
+        updated_at: new Date().toISOString(),
+      }, { merge: true });
       
       toast({
         title: "Profile updated successfully",
@@ -152,13 +142,9 @@ const Profile = () => {
     setIsChangingPassword(true);
     
     try {
-      // Update password with Supabase
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-
-      if (error) {
-        throw error;
+      // Update password with Firebase
+      if (currentUser) {
+        await updatePassword(currentUser, newPassword);
       }
       
       toast({

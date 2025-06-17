@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/components/ui/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { createPaymentRequest } from '@/services/firestoreService';
 
 const Payment = () => {
   const navigate = useNavigate();
@@ -52,24 +52,20 @@ const Payment = () => {
 
     try {
       console.log('Submitting payment request with data:', {
-        user_id: currentUser.id,
+        user_id: currentUser.uid,
         plan_id: selectedPlan.id,
         amount: selectedPlan.price,
         transaction_id: transactionId.trim(),
         payment_method: paymentMethod
       });
 
-      const { data, error } = await supabase
-        .from('payment_requests')
-        .insert({
-          user_id: currentUser.id,
-          plan_id: selectedPlan.id,
-          amount: selectedPlan.price,
-          transaction_id: transactionId.trim(),
-          payment_method: paymentMethod,
-          status: 'pending'
-        })
-        .select();
+      const { data, error } = await createPaymentRequest({
+        user_id: currentUser.uid,
+        plan_id: selectedPlan.id,
+        amount: selectedPlan.price,
+        transaction_id: transactionId.trim(),
+        payment_method: paymentMethod
+      });
 
       if (error) {
         console.error('Payment submission error:', error);

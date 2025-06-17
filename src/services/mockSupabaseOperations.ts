@@ -2,6 +2,8 @@
 // Temporary mock operations for pages that haven't been migrated to Firebase yet
 // This prevents build errors while we gradually migrate all components
 
+import { updatePassword } from 'firebase/auth';
+
 export const mockSupabaseClient = {
   from: (table: string) => ({
     select: () => Promise.resolve({ data: [], error: null }),
@@ -13,7 +15,10 @@ export const mockSupabaseClient = {
     })
   }),
   auth: {
-    updateUser: () => Promise.resolve({ data: null, error: null }),
+    updateUser: (updates: { password?: string }) => {
+      console.log('Mock updateUser called with:', updates);
+      return Promise.resolve({ data: null, error: null });
+    },
     getSession: () => Promise.resolve({ data: { session: null }, error: null }),
     signOut: () => Promise.resolve({ error: null }),
     onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
