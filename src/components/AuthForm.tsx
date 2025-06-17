@@ -32,13 +32,14 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const { login, register } = useAuth();
   
   const getErrorMessage = (error: any) => {
-    console.log('Processing error:', error);
+    console.log('Processing error in AuthForm:', error);
     
-    // Network/Connection errors
+    // Network/Connection errors - clearer messages
     if (error.message?.includes('Failed to fetch') || 
         error.name === 'AuthRetryableFetchError' ||
-        error.message?.includes('Network connection error')) {
-      return 'Network connection failed. Please check your internet connection and try again.';
+        error.message?.includes('Network connection error') ||
+        error.message?.includes('fetch')) {
+      return 'Unable to connect to server. Please check your internet connection and try again.';
     }
     
     // Auth-specific errors
@@ -65,7 +66,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('Form submission started:', { mode, loginMethod, email, phone });
+    console.log('AuthForm: Form submission started:', { mode, loginMethod, email, phone });
     
     const isValid = validateForm({
       mode,
@@ -77,7 +78,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     });
     
     if (!isValid) {
-      console.log('Form validation failed');
+      console.log('AuthForm: Form validation failed');
       return;
     }
     
@@ -86,7 +87,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     try {
       if (mode === 'login') {
         const loginEmail = loginMethod === 'email' ? email : `${phone}@easyearn.com`;
-        console.log('Attempting login with email:', loginEmail);
+        console.log('AuthForm: Attempting login with email:', loginEmail);
         
         await login(loginEmail, password);
         
@@ -100,18 +101,25 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
           // Check if user was trying to buy a plan
           const selectedPlan = localStorage.getItem('selectedPlan');
           if (selectedPlan) {
-            console.log('Redirecting to payment page with plan:', selectedPlan);
+            console.log('AuthForm: Redirecting to payment page with plan:', selectedPlan);
             navigate('/payment');
           } else {
-            console.log('Redirecting to invest page');
+            console.log('AuthForm: Redirecting to invest page');
             navigate('/invest');
           }
         }, 1000);
         
       } else {
-        console.log('Attempting registration with:', { email, phone, referralCode });
+        console.log('AuthForm: Attempting registration with data:', { 
+          email, 
+          phone, 
+          referralCode,
+          hasPassword: !!password 
+        });
         
-        await register(email, password, phone, referralCode);
+        const result = await register(email, password, phone, referralCode);
+        
+        console.log('AuthForm: Registration result:', result);
         
         toast({
           title: "Registration successful!",
@@ -121,7 +129,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         // If a plan was selected, save it for after login
         if (selectedPlan) {
           localStorage.setItem('selectedPlan', selectedPlan);
-          console.log('Plan saved for after login:', selectedPlan);
+          console.log('AuthForm: Plan saved for after login:', selectedPlan);
         }
         
         // Small delay before redirect
@@ -131,10 +139,12 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       }
       
     } catch (error: any) {
-      console.error('Auth error:', error);
+      console.error('AuthForm: Auth error occurred:', error);
       
       let errorTitle = mode === 'login' ? "Login failed" : "Registration failed";
       let errorDescription = getErrorMessage(error);
+      
+      console.log('AuthForm: Showing error toast:', { errorTitle, errorDescription });
       
       toast({
         title: errorTitle,
@@ -143,6 +153,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       });
     } finally {
       setIsLoading(false);
+      console.log('AuthForm: Form submission completed');
     }
   };
   

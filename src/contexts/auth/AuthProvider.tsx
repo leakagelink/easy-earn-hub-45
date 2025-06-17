@@ -21,7 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const login = async (email: string, password: string) => {
-    console.log('AuthProvider: Starting login process for:', email);
+    console.log('AuthProvider: Starting login for:', email);
     
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) {
-        console.error('Login error details:', error);
+        console.error('Login error:', error);
         throw error;
       }
 
@@ -43,10 +43,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const register = async (email: string, password: string, phone: string, referralCode?: string) => {
-    console.log('AuthProvider: Starting registration process for:', email);
+    console.log('AuthProvider: Starting registration for:', email);
     
     try {
-      // Basic validation
+      // Input validation
       if (!email || !password || !phone) {
         throw new Error('All required fields must be filled');
       }
@@ -60,17 +60,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Please enter a valid email address');
       }
 
-      // Use the current domain for redirect
-      const currentDomain = window.location.origin;
-      console.log('Registration redirect URL:', currentDomain);
+      // Current domain for redirect
+      const redirectUrl = window.location.origin;
+      console.log('Registration redirect URL:', redirectUrl);
+      
+      // Clean email and phone
+      const cleanEmail = email.trim().toLowerCase();
+      const cleanPhone = phone.trim();
+      
+      console.log('Attempting registration with cleaned data:', { 
+        email: cleanEmail, 
+        phone: cleanPhone,
+        redirectUrl 
+      });
       
       const { data, error } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
+        email: cleanEmail,
         password: password,
         options: {
-          emailRedirectTo: currentDomain,
+          emailRedirectTo: redirectUrl,
           data: {
-            phone: phone.trim(),
+            phone: cleanPhone,
             referralCode: referralCode?.trim() || ''
           }
         }
@@ -79,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         console.error('Registration error details:', error);
         
-        // Handle specific Supabase errors
+        // Handle specific error messages
         if (error.message?.includes('User already registered')) {
           throw new Error('This email is already registered. Please try logging in instead.');
         }
@@ -90,13 +100,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw new Error('Password must be at least 6 characters long.');
         }
         if (error.message?.includes('Failed to fetch') || error.name === 'AuthRetryableFetchError') {
-          throw new Error('Network connection error. Please check your internet connection and try again.');
+          throw new Error('Unable to connect to server. Please check your internet connection and try again.');
+        }
+        
+        // If it's a network error, provide a clearer message
+        if (error.message?.includes('fetch')) {
+          throw new Error('Network error occurred. Please try again in a moment.');
         }
         
         throw error;
       }
 
-      console.log('AuthProvider: Registration successful');
+      console.log('AuthProvider: Registration successful', data);
       return data;
     } catch (error) {
       console.error('AuthProvider: Registration failed:', error);
@@ -131,7 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    console.log('AuthProvider: Setting up Supabase auth listener');
+    console.log('AuthProvider: Setting up auth listener');
     
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -146,7 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const userName = session.user.user_metadata?.name || userEmail.split('@')[0];
           const isAdminUser = userEmail === 'admin@easyearn.us';
           
-          console.log('AuthProvider: Setting user storage for:', userEmail, 'isAdmin:', isAdminUser);
+          console.log('AuthProvider: User data:', { userEmail, userName, isAdminUser });
           
           localStorage.setItem('isLoggedIn', 'true');
           localStorage.setItem('userEmail', userEmail);
@@ -174,6 +189,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('AuthProvider: Initial session:', session?.user?.email || 'No session');
       setSession(session);
       setCurrentUser(session?.user ?? null);
       setLoading(false);
