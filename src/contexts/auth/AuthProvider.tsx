@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(data.session);
           setCurrentUser(data.user);
         } else {
-          // For fallback users, create a compatible user object but don't set as current user
+          // For fallback users, don't set as current user
           // Let them login after registration
           console.log('Fallback user created, user should login');
         }
