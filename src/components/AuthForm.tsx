@@ -44,6 +44,16 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check internet connectivity first
+    if (!navigator.onLine) {
+      toast({
+        title: "❌ No Internet Connection",
+        description: "कृपया internet connection check करें।",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     console.log('📋 Form submission:', { mode, email, phone, loginMethod });
     
     // Enhanced validation
@@ -93,8 +103,20 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         
         await register(email, password, phone, referralCode);
         
-        if (selectedPlan) localStorage.setItem('selectedPlan', selectedPlan);
-        navigate('/login');
+        if (selectedPlan) {
+          localStorage.setItem('selectedPlan', selectedPlan);
+        }
+        
+        // Show success message and redirect to login
+        toast({
+          title: "✅ Registration Successful!",
+          description: "Account बन गया! अब login करें।",
+        });
+        
+        // Small delay then redirect to login
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
       }
     } catch (error: any) {
       console.error('💥 Auth error:', error);
@@ -119,6 +141,14 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         <div className="mb-6 p-3 bg-easyearn-purple/10 rounded-md">
           <p className="text-sm text-center text-easyearn-purple">
             आप Plan {selectedPlan} के लिए register कर रहे हैं
+          </p>
+        </div>
+      )}
+      
+      {!navigator.onLine && (
+        <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-md">
+          <p className="text-sm text-red-600 text-center">
+            ⚠️ Internet connection नहीं है। कृपया WiFi/Data check करें।
           </p>
         </div>
       )}
@@ -158,10 +188,10 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       <div className="mt-4 text-center">
         <p className="text-xs text-green-600 font-medium">
-          🔄 Supabase Authentication System
+          🔄 Updated Supabase Authentication
         </p>
         <p className="text-xs text-gray-500 mt-1">
-          Reliable & Secure Authentication
+          Better Network Handling & Error Messages
         </p>
       </div>
     </div>

@@ -10,5 +10,27 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, 
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: false,
+    flowType: 'pkce'
+  },
+  global: {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
+    }
+  },
+  realtime: {
+    enabled: false
   }
 })
+
+// Test connectivity function
+export const testSupabaseConnection = async () => {
+  try {
+    const { data, error } = await supabase.from('profiles').select('count').limit(1)
+    return { success: true, error: null }
+  } catch (error) {
+    console.log('Supabase connection test failed:', error)
+    return { success: false, error }
+  }
+}

@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, testSupabaseConnection } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 
 interface SupabaseAuthContextType {
@@ -57,6 +57,12 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     console.log('🔑 Supabase login attempt for:', email);
     
     try {
+      // Test connection first
+      const connectionTest = await testSupabaseConnection();
+      if (!connectionTest.success) {
+        throw new Error('Network connection issue. Please check your internet connection.');
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
@@ -80,6 +86,15 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     console.log('📝 Supabase registration attempt for:', email);
     
     try {
+      // Test connection first
+      const connectionTest = await testSupabaseConnection();
+      if (!connectionTest.success) {
+        throw new Error('Network connection issue. कृपया अपना internet connection check करें।');
+      }
+
+      // Clear any existing session first
+      await supabase.auth.signOut();
+      
       const redirectUrl = `${window.location.origin}/`;
       
       const { data, error } = await supabase.auth.signUp({
@@ -94,13 +109,20 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase signup error details:', error);
+        throw error;
+      }
 
-      console.log('✅ Supabase registration successful');
+      console.log('✅ Supabase registration successful', data);
+      
       toast({
         title: "✅ Registration successful!",
-        description: "Please check your email to confirm your account.",
+        description: "Account बन गया है। अब login करें।",
       });
+
+      // Force a small delay to ensure the user is created
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
     } catch (error: any) {
       console.error('💥 Supabase registration failed:', error);
@@ -153,7 +175,12 @@ const getErrorMessage = (error: any): string => {
   
   const message = error.message || error.toString();
   
-  console.log('🔍 Error details:', { message });
+  console.log('🔍 Error details:', { message, error });
+  
+  // Network errors
+  if (message.includes('Failed to fetch') || message.includes('Network')) {
+    return 'Internet connection की समस्या है। WiFi/Data check करें और फिर try करें।';
+  }
   
   // Supabase specific errors
   if (message.includes('Invalid login credentials')) {
@@ -164,7 +191,7 @@ const getErrorMessage = (error: any): string => {
     return 'पहले अपना email confirm करें।';
   }
   
-  if (message.includes('User already registered')) {
+  if (message.includes('User already registered') || message.includes('already registered')) {
     return 'यह email पहले से registered है। Login करने की कोशिश करें।';
   }
   
@@ -174,6 +201,10 @@ const getErrorMessage = (error: any): string => {
   
   if (message.includes('Invalid email')) {
     return 'सही email address डालें।';
+  }
+
+  if (message.includes('signup is disabled')) {
+    return 'Registration बंद है। Admin से contact करें।';
   }
   
   return message || 'कुछ गलत हुआ है। फिर से कोशिश करें।';
