@@ -102,11 +102,49 @@ export const useAdminData = () => {
     retryDelay: 1000,
   });
 
+  const { data: transactions = [] } = useQuery({
+    queryKey: ['admin-transactions'],
+    queryFn: async () => {
+      console.log('Fetching transactions from Supabase...');
+      
+      const { data, error } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          profiles!inner(email)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching transactions:', error);
+        throw error;
+      }
+
+      console.log('Transactions fetched:', data?.length || 0);
+      return data?.map(tx => ({
+        ...tx,
+        user_email: tx.profiles?.email || 'N/A'
+      })) || [];
+    },
+    retry: 3,
+    retryDelay: 1000,
+  });
+
+  // Calculate stats from the fetched data
+  const stats = {
+    totalUsers: users.length,
+    totalInvestment: investments.reduce((sum, inv) => sum + Number(inv.amount || 0), 0),
+    activePlans: investments.filter(inv => inv.status === 'active').length,
+    pendingPayments: paymentRequests.filter(req => req.status === 'pending').length
+  };
+
   return {
     paymentRequests,
     users,
     investments,
     withdrawals,
+    transactions,
+    stats,
     isLoading,
     refetch
   };
