@@ -9,15 +9,16 @@ import { useToast } from "@/components/ui/use-toast";
 import { User, Mail, Phone, Key } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { currentUser, loading } = useAuth();
   
-  // Get user info from localStorage (mock data)
-  const [name, setName] = useState(localStorage.getItem('userName') || '');
-  const [email, setEmail] = useState(localStorage.getItem('userEmail') || '');
-  const [phone, setPhone] = useState(localStorage.getItem('userPhone') || '');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   
   // Password change state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -27,19 +28,60 @@ const Profile = () => {
   // Loading states
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   
   // Check if user is logged in
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    if (!isLoggedIn) {
+    if (!loading && !currentUser) {
       navigate('/login');
     }
-  }, [navigate]);
+  }, [currentUser, loading, navigate]);
+
+  // Load user profile data
+  useEffect(() => {
+    if (currentUser) {
+      loadUserProfile();
+    }
+  }, [currentUser]);
+
+  const loadUserProfile = async () => {
+    try {
+      setIsLoadingProfile(true);
+      
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser?.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        throw error;
+      }
+
+      if (profile) {
+        setEmail(profile.email || '');
+        setPhone(profile.phone || '');
+      } else {
+        // Set from auth user if profile doesn't exist yet
+        setEmail(currentUser?.email || '');
+        setPhone('');
+      }
+    } catch (error: any) {
+      console.error('Error loading profile:', error);
+      toast({
+        title: "Error loading profile",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  };
   
-  const handleUpdateProfile = (e: React.FormEvent) => {
+  const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name || !email || !phone) {
+    if (!email || !phone) {
       toast({
         title: "All fields are required",
         variant: "destructive",
@@ -49,22 +91,36 @@ const Profile = () => {
     
     setIsUpdatingProfile(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      // Update localStorage
-      localStorage.setItem('userName', name);
-      localStorage.setItem('userEmail', email);
-      localStorage.setItem('userPhone', phone);
+    try {
+      // Update or insert profile
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: currentUser?.id,
+          email,
+          phone,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) throw error;
       
       toast({
         title: "Profile updated successfully",
       });
       
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Error updating profile",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
       setIsUpdatingProfile(false);
-    }, 1000);
+    }
   };
   
-  const handleChangePassword = (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -82,11 +138,24 @@ const Profile = () => {
       });
       return;
     }
+
+    if (newPassword.length < 6) {
+      toast({
+        title: "Password must be at least 6 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsChangingPassword(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+      
       toast({
         title: "Password changed successfully",
       });
@@ -94,9 +163,25 @@ const Profile = () => {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+    } catch (error: any) {
+      console.error('Error changing password:', error);
+      toast({
+        title: "Error changing password",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
       setIsChangingPassword(false);
-    }, 1000);
+    }
   };
+
+  if (loading || isLoadingProfile) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">Loading...</div>
+      </div>
+    );
+  }
   
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -119,22 +204,6 @@ const Profile = () => {
             <CardContent>
               <form onSubmit={handleUpdateProfile} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <div className="flex">
-                    <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
-                      <User className="h-4 w-4" />
-                    </span>
-                    <Input
-                      id="name"
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="rounded-l-none"
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
                   <div className="flex">
                     <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
@@ -146,6 +215,7 @@ const Profile = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="rounded-l-none"
+                      disabled={true} // Email shouldn't be editable
                     />
                   </div>
                 </div>
@@ -162,6 +232,7 @@ const Profile = () => {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       className="rounded-l-none"
+                      placeholder="Enter your phone number"
                     />
                   </div>
                 </div>
@@ -194,6 +265,7 @@ const Profile = () => {
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Enter current password"
                   />
                 </div>
                 
@@ -204,6 +276,7 @@ const Profile = () => {
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password"
                   />
                 </div>
                 
@@ -214,6 +287,7 @@ const Profile = () => {
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
                   />
                 </div>
                 
@@ -228,21 +302,6 @@ const Profile = () => {
             </CardContent>
           </Card>
         </div>
-        
-        {/* Account Deactivation */}
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle className="text-red-500">Danger Zone</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600 mb-4">
-              Once you delete your account, there is no going back. Please be certain.
-            </p>
-            <Button variant="destructive">
-              Deactivate Account
-            </Button>
-          </CardContent>
-        </Card>
       </main>
       
       <Footer />

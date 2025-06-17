@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
-import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 
 const Payment = () => {
   const navigate = useNavigate();
@@ -38,14 +37,42 @@ const Payment = () => {
     setIsProcessing(true);
 
     try {
-      // Add plan to user's active plans in Firebase
-      await updateDoc(doc(db, 'users', currentUser.uid), {
-        activePlans: arrayUnion({
-          ...selectedPlan,
-          purchaseDate: new Date(),
-          status: 'active'
-        })
-      });
+      // Get the current user's profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', currentUser.id)
+        .single();
+
+      if (!profile) {
+        throw new Error('User profile not found');
+      }
+
+      // Add investment to user_investments table
+      const { error: investmentError } = await supabase
+        .from('user_investments')
+        .insert({
+          user_id: currentUser.id,
+          plan_id: selectedPlan.id,
+          amount: selectedPlan.price,
+          status: 'active',
+          purchase_date: new Date().toISOString(),
+          expiry_date: new Date(Date.now() + selectedPlan.validityDays * 24 * 60 * 60 * 1000).toISOString()
+        });
+
+      if (investmentError) throw investmentError;
+
+      // Add transaction record
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: currentUser.id,
+          type: 'recharge',
+          amount: selectedPlan.price,
+          status: 'completed'
+        });
+
+      if (transactionError) throw transactionError;
 
       // Clear selected plan from localStorage
       localStorage.removeItem('selectedPlan');
@@ -56,11 +83,11 @@ const Payment = () => {
       });
 
       navigate('/dashboard');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Payment error:', error);
       toast({
         title: "Payment Failed",
-        description: "There was an error processing your payment. Please try again.",
+        description: error.message || "There was an error processing your payment. Please try again.",
         variant: "destructive",
       });
     } finally {

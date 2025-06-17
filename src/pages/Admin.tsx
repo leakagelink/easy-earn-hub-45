@@ -7,42 +7,49 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Admin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { currentUser, login, isAdmin } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Check if already logged in
-  const isAdmin = localStorage.getItem('isAdmin') === 'true';
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Check admin credentials
-    if (email === 'admin@easyearn.us' && password === 'Easy@123') {
-      localStorage.setItem('isAdmin', 'true');
-      localStorage.setItem('adminEmail', email);
-      toast({
-        title: "Login successful",
-        description: "Welcome to admin panel",
-      });
-      setIsLoading(false);
-      window.location.reload();
-    } else {
+    try {
+      await login(email, password);
+      
+      if (email === 'admin@easyearn.us') {
+        toast({
+          title: "Login successful",
+          description: "Welcome to admin panel",
+        });
+      } else {
+        toast({
+          title: "Access denied",
+          description: "You don't have admin privileges",
+          variant: "destructive",
+        });
+        return;
+      }
+    } catch (error: any) {
       toast({
         title: "Login failed",
-        description: "Invalid email or password",
+        description: error.message,
         variant: "destructive",
       });
+    } finally {
       setIsLoading(false);
     }
   };
 
-  if (!isAdmin) {
+  // Check if user is admin
+  if (!currentUser || !isAdmin) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100">
         <div className="w-full max-w-md p-8 space-y-4 bg-white rounded-lg shadow-md">

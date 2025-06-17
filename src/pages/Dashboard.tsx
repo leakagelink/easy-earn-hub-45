@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,71 +7,121 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowUp, ArrowDown, Wallet, Users, History } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
+
+interface Investment {
+  id: string;
+  plan_id: string;
+  amount: number;
+  status: string;
+  purchase_date: string;
+  expiry_date: string;
+  investment_plans: {
+    name: string;
+    daily_profit: number;
+  };
+}
+
+interface Transaction {
+  id: string;
+  type: string;
+  amount: number;
+  status: string;
+  created_at: string;
+}
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { currentUser, loading } = useAuth();
+  const { toast } = useToast();
+  
+  const [investments, setInvestments] = useState<Investment[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [balance, setBalance] = useState(0);
+  const [totalEarned, setTotalEarned] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Check if user is logged in
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    if (!isLoggedIn) {
+    if (!loading && !currentUser) {
       navigate('/login');
     }
-  }, [navigate]);
-  
-  // Get current plan - mock data
-  const currentPlan = localStorage.getItem('userPlan') || '1';
-  
-  // Generate some fake data for the dashboard
-  const getRandomAmount = (min: number, max: number) => {
-    return Math.floor(Math.random() * (max - min + 1) + min);
-  };
-  
-  const dailyProfit = [120, 244, 504, 765, 1288, 1622, 2100][parseInt(currentPlan) - 1 || 0];
-  const balance = getRandomAmount(dailyProfit * 7, dailyProfit * 30);
-  const totalEarned = getRandomAmount(balance * 2, balance * 4);
-  const referralEarnings = getRandomAmount(500, 5000);
-  
-  // Mock transaction history
-  const generateTransactions = () => {
-    const types = ['earning', 'referral', 'recharge', 'withdrawal'];
-    const transactions = [];
-    
-    for (let i = 0; i < 10; i++) {
-      const type = types[Math.floor(Math.random() * types.length)];
-      const amount = type === 'earning' 
-        ? dailyProfit 
-        : type === 'referral' 
-          ? getRandomAmount(50, 500)
-          : type === 'recharge'
-            ? getRandomAmount(500, 7000)
-            : getRandomAmount(dailyProfit * 2, dailyProfit * 10);
-            
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      
-      transactions.push({
-        id: i,
-        type,
-        amount,
-        date: date.toLocaleDateString(),
-        status: Math.random() > 0.1 ? 'completed' : 'pending'
-      });
+  }, [currentUser, loading, navigate]);
+
+  // Fetch user data
+  useEffect(() => {
+    if (currentUser) {
+      fetchUserData();
     }
-    
-    return transactions;
+  }, [currentUser]);
+
+  const fetchUserData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch user investments
+      const { data: investmentsData, error: investmentsError } = await supabase
+        .from('user_investments')
+        .select(`
+          *,
+          investment_plans (
+            name,
+            daily_profit
+          )
+        `)
+        .eq('user_id', currentUser?.id);
+
+      if (investmentsError) throw investmentsError;
+      setInvestments(investmentsData || []);
+
+      // Fetch user transactions
+      const { data: transactionsData, error: transactionsError } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', currentUser?.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (transactionsError) throw transactionsError;
+      setTransactions(transactionsData || []);
+
+      // Calculate totals
+      const totalInvested = investmentsData?.reduce((sum, inv) => sum + Number(inv.amount), 0) || 0;
+      const totalEarnings = transactionsData?.filter(t => t.type === 'earning')
+        .reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+      
+      setBalance(totalInvested + totalEarnings);
+      setTotalEarned(totalEarnings);
+
+    } catch (error: any) {
+      console.error('Error fetching user data:', error);
+      toast({
+        title: "Error loading data",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
-  
-  const transactions = generateTransactions();
-  
-  // Mock referrals
-  const referrals = [
-    { name: 'Amit Kumar', level: 1, earnings: getRandomAmount(200, 1000) },
-    { name: 'Priya Sharma', level: 1, earnings: getRandomAmount(200, 1000) },
-    { name: 'Raj Singh', level: 2, earnings: getRandomAmount(100, 500) },
-    { name: 'Neha Patel', level: 2, earnings: getRandomAmount(100, 500) },
-    { name: 'Vijay Mehta', level: 3, earnings: getRandomAmount(50, 200) },
-  ];
+
+  const dailyProfit = investments.reduce((sum, inv) => {
+    return sum + (inv.investment_plans?.daily_profit || 0);
+  }, 0);
+
+  const referralEarnings = transactions
+    .filter(t => t.type === 'referral')
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  if (loading || isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">Loading...</div>
+      </div>
+    );
+  }
   
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -102,7 +152,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">₹{dailyProfit.toLocaleString()}</div>
-              <p className="text-xs text-gray-500">Plan {currentPlan}</p>
+              <p className="text-xs text-gray-500">From {investments.length} plans</p>
             </CardContent>
           </Card>
           
@@ -150,7 +200,7 @@ const Dashboard = () => {
         <Tabs defaultValue="transactions" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-8">
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
-            <TabsTrigger value="referrals">Referrals</TabsTrigger>
+            <TabsTrigger value="investments">Investments</TabsTrigger>
           </TabsList>
           
           <TabsContent value="transactions">
@@ -173,7 +223,9 @@ const Dashboard = () => {
                       <tbody>
                         {transactions.map((transaction) => (
                           <tr key={transaction.id} className="border-b">
-                            <td className="py-3 px-4">{transaction.date}</td>
+                            <td className="py-3 px-4">
+                              {new Date(transaction.created_at).toLocaleDateString()}
+                            </td>
                             <td className="py-3 px-4 capitalize">{transaction.type}</td>
                             <td className={`py-3 px-4 text-right ${
                               transaction.type === 'withdrawal' 
@@ -181,7 +233,7 @@ const Dashboard = () => {
                                 : 'text-green-500'
                             }`}>
                               {transaction.type === 'withdrawal' ? '-' : '+'}
-                              ₹{transaction.amount.toLocaleString()}
+                              ₹{Number(transaction.amount).toLocaleString()}
                             </td>
                             <td className="py-3 px-4">
                               <span className={`px-2 py-1 rounded-full text-xs ${
@@ -194,6 +246,13 @@ const Dashboard = () => {
                             </td>
                           </tr>
                         ))}
+                        {transactions.length === 0 && (
+                          <tr>
+                            <td colSpan={4} className="py-8 text-center text-gray-500">
+                              No transactions yet
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -202,10 +261,10 @@ const Dashboard = () => {
             </Card>
           </TabsContent>
           
-          <TabsContent value="referrals">
+          <TabsContent value="investments">
             <Card>
               <CardHeader>
-                <CardTitle>Your Referrals</CardTitle>
+                <CardTitle>Your Investments</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="rounded-md border">
@@ -213,43 +272,49 @@ const Dashboard = () => {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-gray-100 border-b">
-                          <th className="py-3 px-4 text-left">Name</th>
-                          <th className="py-3 px-4 text-left">Level</th>
-                          <th className="py-3 px-4 text-right">Earnings</th>
+                          <th className="py-3 px-4 text-left">Plan</th>
+                          <th className="py-3 px-4 text-right">Amount</th>
+                          <th className="py-3 px-4 text-right">Daily Profit</th>
+                          <th className="py-3 px-4 text-left">Status</th>
+                          <th className="py-3 px-4 text-left">Purchase Date</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {referrals.map((referral, index) => (
-                          <tr key={index} className="border-b">
-                            <td className="py-3 px-4">{referral.name}</td>
-                            <td className="py-3 px-4">Level {referral.level}</td>
+                        {investments.map((investment) => (
+                          <tr key={investment.id} className="border-b">
+                            <td className="py-3 px-4">
+                              {investment.investment_plans?.name || 'Unknown Plan'}
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              ₹{Number(investment.amount).toLocaleString()}
+                            </td>
                             <td className="py-3 px-4 text-right text-green-500">
-                              ₹{referral.earnings.toLocaleString()}
+                              ₹{investment.investment_plans?.daily_profit || 0}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className={`px-2 py-1 rounded-full text-xs ${
+                                investment.status === 'active'
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {investment.status}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              {new Date(investment.purchase_date).toLocaleDateString()}
                             </td>
                           </tr>
                         ))}
+                        {investments.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="py-8 text-center text-gray-500">
+                              No investments yet. <Button variant="link" onClick={() => navigate('/invest')}>Start investing</Button>
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
-                </div>
-                
-                <div className="mt-6">
-                  <h3 className="font-medium mb-2">Share Your Referral Link</h3>
-                  <div className="flex items-center">
-                    <Input 
-                      readOnly 
-                      value={`https://easyearn.com/ref/${btoa(localStorage.getItem('userEmail') || '')}`} 
-                      className="mr-2" 
-                    />
-                    <Button variant="outline" onClick={() => {
-                      navigator.clipboard.writeText(`https://easyearn.com/ref/${btoa(localStorage.getItem('userEmail') || '')}`);
-                    }}>
-                      Copy
-                    </Button>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-2">
-                    Earn up to 10% on level 1, 5% on level 2, and 2% on level 3 referrals.
-                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -259,16 +324,6 @@ const Dashboard = () => {
       
       <Footer />
     </div>
-  );
-};
-
-// Input component for referral link
-const Input = ({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) => {
-  return (
-    <input
-      className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
-      {...props}
-    />
   );
 };
 
