@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
-import { useAuth } from '@/contexts/auth';
+import { useSupabaseAuth } from '@/contexts/auth';
 import LoginHeader from './LoginHeader';
 import LoginOptions from './LoginOptions';
 import EmailLoginForm from './EmailLoginForm';
@@ -20,7 +20,7 @@ const LoginForm: React.FC = () => {
   
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login } = useSupabaseAuth();
   
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);

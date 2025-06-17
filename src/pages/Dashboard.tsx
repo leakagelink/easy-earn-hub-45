@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { useAuth } from "@/contexts/auth";
+import { useSupabaseAuth } from '@/contexts/auth';
 import { useDashboardData } from "@/hooks/useDashboardData";
 import DashboardStats from "@/components/dashboard/DashboardStats";
 import DashboardActions from "@/components/dashboard/DashboardActions";
@@ -13,7 +13,7 @@ import InvestmentsTable from "@/components/dashboard/InvestmentsTable";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { currentUser, loading } = useAuth();
+  const { currentUser, loading } = useSupabaseAuth();
   const {
     investments,
     transactions,

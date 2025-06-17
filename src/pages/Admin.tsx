@@ -7,12 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { useAuth } from '@/contexts/auth';
+import { useSupabaseAuth } from '@/contexts/auth';
 
 const Admin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { currentUser, login, isAdmin } = useAuth();
+  const { currentUser, login, isAdmin } = useSupabaseAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);

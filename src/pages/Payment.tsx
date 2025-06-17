@@ -6,13 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { useAuth } from "@/contexts/auth";
+import { useSupabaseAuth } from '@/contexts/auth';
 import { firebaseService } from '@/services/firebaseService';
 
 const Payment = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { currentUser } = useAuth();
+  const { currentUser } = useSupabaseAuth();
   const [transactionId, setTransactionId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const selectedPlan = localStorage.getItem('selectedPlan');
@@ -54,7 +54,7 @@ const Payment = () => {
       const planData = JSON.parse(selectedPlan);
 
       console.log('Submitting payment request with Firebase:', {
-        userId: currentUser?.$id,
+        userId: currentUser?.id,
         planId: planData.id,
         transactionId: transactionId,
         paymentMethod: 'UPI',
@@ -62,7 +62,7 @@ const Payment = () => {
       });
 
       const result = await firebaseService.purchasePlan({
-        userId: currentUser?.$id,
+        userId: currentUser?.id,
         planId: planData.id,
         transactionId: transactionId,
         paymentMethod: 'UPI',

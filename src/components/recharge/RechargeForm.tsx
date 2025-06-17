@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/auth';
+import { useSupabaseAuth } from '@/contexts/auth';
 import { firebaseService } from '@/services/firebaseService';
 import QuickAmountButtons from './QuickAmountButtons';
 import PaymentInstructions from './PaymentInstructions';
@@ -15,7 +15,7 @@ const RechargeForm = () => {
   const [transactionId, setTransactionId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const { currentUser } = useAuth();
+  const { currentUser } = useSupabaseAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +53,7 @@ const RechargeForm = () => {
     try {
       // Create recharge request in Firebase
       const result = await firebaseService.createTransaction({
-        userId: currentUser.$id,
+        userId: currentUser.id,
         type: 'recharge_request',
         amount: rechargeAmount,
         status: 'pending',
