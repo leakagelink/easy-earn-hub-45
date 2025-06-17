@@ -2,11 +2,12 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, ArrowUpRight, Wallet, Database, CalendarCheck } from 'lucide-react';
+import { Users, ArrowUpRight, Wallet, Database, CalendarCheck, CreditCard } from 'lucide-react';
 import { useAdminData } from '@/hooks/useAdminData';
+import PaymentRequestsTable from './admin/PaymentRequestsTable';
 
 const AdminDashboard = () => {
-  const { stats, users, investments, transactions, withdrawals, isLoading } = useAdminData();
+  const { stats, users, investments, transactions, withdrawals, paymentRequests, isLoading, refetch } = useAdminData();
 
   if (isLoading) {
     return (
@@ -39,10 +40,10 @@ const AdminDashboard = () => {
       change: "+2" 
     },
     { 
-      title: "Total Withdrawals", 
-      value: `₹${(stats.totalWithdrawals / 100000).toFixed(1)}L`, 
-      icon: ArrowUpRight, 
-      change: "+0.2%" 
+      title: "Pending Payments", 
+      value: stats.pendingPayments.toString(), 
+      icon: CreditCard, 
+      change: `${stats.pendingPayments > 0 ? '+' : ''}${stats.pendingPayments}` 
     },
   ];
 
@@ -68,8 +69,10 @@ const AdminDashboard = () => {
             <CardContent>
               <div className="text-2xl font-bold">{stat.value}</div>
               <p className="text-xs text-muted-foreground flex items-center mt-1">
-                <span className="text-green-600 mr-1">{stat.change}</span>
-                from last month
+                <span className={`mr-1 ${stat.title === 'Pending Payments' && stats.pendingPayments > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                  {stat.change}
+                </span>
+                {stat.title === 'Pending Payments' ? 'awaiting approval' : 'from last month'}
               </p>
             </CardContent>
           </Card>
@@ -77,13 +80,21 @@ const AdminDashboard = () => {
       </div>
 
       {/* Activity Tabs */}
-      <Tabs defaultValue="transactions" className="space-y-4">
+      <Tabs defaultValue="payments" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="payments">Payment Requests</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="investments">Investments</TabsTrigger>
           <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="payments" className="space-y-4">
+          <PaymentRequestsTable 
+            paymentRequests={paymentRequests} 
+            onRefresh={refetch}
+          />
+        </TabsContent>
 
         <TabsContent value="transactions" className="space-y-4">
           <Card>

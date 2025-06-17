@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const Payment = () => {
   const navigate = useNavigate();
@@ -50,25 +51,27 @@ const Payment = () => {
     setIsProcessing(true);
 
     try {
-      // Create payment request for admin approval
-      const paymentRequest = {
-        id: Date.now().toString(),
-        userId: currentUser.id,
-        userName: currentUser.email?.split('@')[0] || 'User',
-        userEmail: currentUser.email,
-        planId: selectedPlan.id,
-        planName: selectedPlan.name,
-        amount: selectedPlan.price,
-        transactionId: transactionId.trim(),
-        paymentMethod: paymentMethod,
-        date: new Date().toISOString(),
-        status: 'pending',
-        type: 'investment'
-      };
+      // Submit payment request to Supabase
+      const { error } = await supabase
+        .from('payment_requests')
+        .insert({
+          user_id: currentUser.id,
+          plan_id: selectedPlan.id,
+          amount: selectedPlan.price,
+          transaction_id: transactionId.trim(),
+          payment_method: paymentMethod,
+          status: 'pending'
+        });
 
-      // Store payment request in localStorage for admin review
-      const existingRequests = JSON.parse(localStorage.getItem('paymentRequests') || '[]');
-      localStorage.setItem('paymentRequests', JSON.stringify([...existingRequests, paymentRequest]));
+      if (error) {
+        console.error('Payment request submission error:', error);
+        toast({
+          title: "Submission Failed",
+          description: "There was an error submitting your payment request. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       // Clear selected plan from localStorage
       localStorage.removeItem('selectedPlan');

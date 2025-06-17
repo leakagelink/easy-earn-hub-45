@@ -8,6 +8,7 @@ interface AdminStats {
   totalInvestment: number;
   activePlans: number;
   totalWithdrawals: number;
+  pendingPayments: number;
 }
 
 interface UserData {
@@ -48,17 +49,32 @@ interface WithdrawalData {
   user_email?: string;
 }
 
+interface PaymentRequestData {
+  id: string;
+  user_id: string;
+  plan_id: string;
+  amount: number;
+  transaction_id: string;
+  payment_method: string;
+  status: string;
+  created_at: string;
+  user_email?: string;
+  plan_name?: string;
+}
+
 export const useAdminData = () => {
   const [stats, setStats] = useState<AdminStats>({
     totalUsers: 0,
     totalInvestment: 0,
     activePlans: 0,
-    totalWithdrawals: 0
+    totalWithdrawals: 0,
+    pendingPayments: 0
   });
   const [users, setUsers] = useState<UserData[]>([]);
   const [investments, setInvestments] = useState<InvestmentData[]>([]);
   const [transactions, setTransactions] = useState<TransactionData[]>([]);
   const [withdrawals, setWithdrawals] = useState<WithdrawalData[]>([]);
+  const [paymentRequests, setPaymentRequests] = useState<PaymentRequestData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
@@ -153,17 +169,47 @@ export const useAdminData = () => {
         setWithdrawals(formattedWithdrawals);
       }
 
+      // Fetch payment requests with user and plan details
+      const { data: paymentRequestsData, error: paymentRequestsError } = await supabase
+        .from('payment_requests')
+        .select(`
+          *,
+          profiles(email),
+          investment_plans(name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (paymentRequestsError) {
+        console.error('Error fetching payment requests:', paymentRequestsError);
+      } else {
+        const formattedPaymentRequests = paymentRequestsData?.map(pr => ({
+          id: pr.id,
+          user_id: pr.user_id,
+          plan_id: pr.plan_id,
+          amount: pr.amount,
+          transaction_id: pr.transaction_id,
+          payment_method: pr.payment_method,
+          status: pr.status,
+          created_at: pr.created_at,
+          user_email: pr.profiles?.email || 'Unknown',
+          plan_name: pr.investment_plans?.name || 'Unknown Plan'
+        })) || [];
+        setPaymentRequests(formattedPaymentRequests);
+      }
+
       // Calculate stats
       const totalUsers = usersData?.length || 0;
       const totalInvestment = investmentsData?.reduce((sum, inv) => sum + Number(inv.amount), 0) || 0;
       const activePlans = investmentsData?.filter(inv => inv.status === 'active').length || 0;
       const totalWithdrawals = withdrawalsData?.reduce((sum, wd) => sum + Number(wd.amount), 0) || 0;
+      const pendingPayments = paymentRequestsData?.filter(pr => pr.status === 'pending').length || 0;
 
       setStats({
         totalUsers,
         totalInvestment,
         activePlans,
-        totalWithdrawals
+        totalWithdrawals,
+        pendingPayments
       });
 
     } catch (error: any) {
@@ -188,6 +234,7 @@ export const useAdminData = () => {
     investments,
     transactions,
     withdrawals,
+    paymentRequests,
     isLoading,
     refetch: fetchAdminData
   };

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
@@ -5,12 +6,12 @@ import { Bitcoin } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
 
 interface PlanCardProps {
-  id: number;
+  id: string;
   name: string;
   price: number;
-  dailyProfit: number;
-  validityDays: number;
-  totalIncome: number;
+  daily_profit: number;
+  validity_days: number;
+  total_income: number;
   isPremium?: boolean;
 }
 
@@ -18,9 +19,9 @@ const PlanCard: React.FC<PlanCardProps> = ({
   id,
   name,
   price,
-  dailyProfit,
-  validityDays,
-  totalIncome,
+  daily_profit,
+  validity_days,
+  total_income,
   isPremium = false,
 }) => {
   const navigate = useNavigate();
@@ -29,7 +30,12 @@ const PlanCard: React.FC<PlanCardProps> = ({
   const handleChoosePlan = () => {
     // Store selected plan in localStorage
     localStorage.setItem('selectedPlan', JSON.stringify({
-      id, name, price, dailyProfit, validityDays, totalIncome
+      id, 
+      name, 
+      price, 
+      dailyProfit: daily_profit, 
+      validityDays: validity_days, 
+      totalIncome: total_income
     }));
 
     if (currentUser) {
@@ -70,15 +76,15 @@ const PlanCard: React.FC<PlanCardProps> = ({
       <div className={`space-y-3 mb-6 ${isPremium ? 'text-gray-100' : 'text-gray-600'}`}>
         <div className="flex justify-between">
           <span>Daily Profit:</span>
-          <span className="font-semibold">₹{dailyProfit}</span>
+          <span className="font-semibold">₹{daily_profit}</span>
         </div>
         <div className="flex justify-between">
           <span>Validity Period:</span>
-          <span className="font-semibold">{validityDays} Days</span>
+          <span className="font-semibold">{validity_days} Days</span>
         </div>
         <div className="flex justify-between">
           <span>Total Income:</span>
-          <span className="font-semibold">₹{totalIncome}</span>
+          <span className="font-semibold">₹{total_income}</span>
         </div>
       </div>
       

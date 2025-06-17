@@ -7,12 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/auth";
+import { supabase } from '@/integrations/supabase/client';
 import { Wallet } from "lucide-react";
 import QuickAmountButtons from './QuickAmountButtons';
 
 const RechargeForm = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { currentUser } = useAuth();
   
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('upi');
@@ -25,8 +28,17 @@ const RechargeForm = () => {
     setAmount(value.toString());
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!currentUser) {
+      toast({
+        title: "Please login first",
+        variant: "destructive",
+      });
+      navigate('/login');
+      return;
+    }
     
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
       toast({
@@ -46,24 +58,29 @@ const RechargeForm = () => {
     
     setIsSubmitting(true);
     
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{"name": "User", "id": "1"}');
-    const userId = currentUser.id;
-    const userName = currentUser.name;
-    
-    const newRechargeRequest = {
-      id: Date.now().toString(),
-      userId,
-      userName,
-      amount: Number(amount),
-      transactionId: transactionId || 'UPI Payment',
-      date: new Date().toISOString(),
-      status: 'pending',
-    };
-    
-    const existingRequests = JSON.parse(localStorage.getItem('rechargeRequests') || '[]');
-    localStorage.setItem('rechargeRequests', JSON.stringify([...existingRequests, newRechargeRequest]));
-    
-    setTimeout(() => {
+    try {
+      // Submit recharge request to Supabase
+      const { error } = await supabase
+        .from('payment_requests')
+        .insert({
+          user_id: currentUser.id,
+          plan_id: null, // For recharge, plan_id is null
+          amount: Number(amount),
+          transaction_id: transactionId || 'UPI Payment',
+          payment_method: paymentMethod,
+          status: 'pending'
+        });
+
+      if (error) {
+        console.error('Recharge request submission error:', error);
+        toast({
+          title: "Submission Failed",
+          description: "There was an error submitting your recharge request. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
         title: "Recharge request submitted",
         description: `Your recharge request for ₹${amount} has been submitted for verification.`,
@@ -71,10 +88,17 @@ const RechargeForm = () => {
       
       setAmount('');
       setTransactionId('');
-      setIsSubmitting(false);
-      
       navigate('/dashboard');
-    }, 1500);
+    } catch (error: any) {
+      console.error('Recharge submission error:', error);
+      toast({
+        title: "Submission Failed",
+        description: error.message || "There was an error submitting your recharge request. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
