@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 import LoginOptions from './auth/LoginOptions';
 import PhoneInput from './auth/PhoneInput';
 import EmailInput from './auth/EmailInput';
