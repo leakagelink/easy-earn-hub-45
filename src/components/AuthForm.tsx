@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
-import { useSupabaseAuth } from '@/contexts/auth/SupabaseAuthProvider';
+import { useFirebaseAuth } from '@/contexts/auth/FirebaseAuthProvider';
 import NetworkStatus from '@/components/NetworkStatus';
 import LoginOptions from './auth/LoginOptions';
 import PhoneInput from './auth/PhoneInput';
@@ -30,7 +29,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { login, register, networkStatus, isOfflineMode } = useSupabaseAuth();
+  const { login, register, networkStatus, isOfflineMode } = useFirebaseAuth();
   
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -47,7 +46,6 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     
     console.log('📋 Form submission:', { mode, email, phone, loginMethod });
     
-    // Enhanced validation
     if (!password || password.length < 6) {
       toast({ title: "Password कम से कम 6 characters का होना चाहिए", variant: "destructive" });
       return;
@@ -85,12 +83,12 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     try {
       if (mode === 'login') {
         const loginEmail = loginMethod === 'email' ? email : `${phone}@easyearn.com`;
-        console.log('🔑 Attempting login with:', loginEmail);
+        console.log('🔑 Attempting Firebase login with:', loginEmail);
         await login(loginEmail, password);
         
         navigate(localStorage.getItem('selectedPlan') ? '/payment' : '/invest');
       } else {
-        console.log('📝 Attempting registration...');
+        console.log('📝 Attempting Firebase registration...');
         
         await register(email, password, phone, referralCode);
         
@@ -98,7 +96,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
           localStorage.setItem('selectedPlan', selectedPlan);
         }
         
-        // Show success message and redirect to dashboard if offline
+        // Show success message and redirect
         if (isOfflineMode) {
           toast({
             title: "✅ Registration Successful! (Offline)",
@@ -111,24 +109,21 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         } else {
           toast({
             title: "✅ Registration Successful!",
-            description: "Account बन गया! Email verify करने के बाद login करें।",
+            description: "Account बन गया! Dashboard पर जा रहे हैं।",
           });
           
           setTimeout(() => {
-            navigate('/login');
+            navigate('/invest');
           }, 2000);
         }
       }
     } catch (error: any) {
-      console.error('💥 Auth error:', error);
-      
-      // Don't show error as destructive if it's just offline mode
-      const isOfflineSuccess = error.message?.includes('offline') || error.message?.includes('Internet');
+      console.error('💥 Firebase Auth error:', error);
       
       toast({
         title: mode === 'login' ? "❌ Login Failed" : "❌ Registration Failed",
         description: error.message || 'कुछ गलत हुआ है। फिर से कोशिश करें।',
-        variant: isOfflineSuccess ? "default" : "destructive"
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
@@ -155,14 +150,6 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         <div className="mb-4 p-3 bg-green-100 border border-green-300 rounded-md">
           <p className="text-sm text-green-700 text-center">
             ✅ आप offline mode में हैं। सब कुछ काम कर रहा है!
-          </p>
-        </div>
-      )}
-      
-      {networkStatus && !networkStatus.supabase && !isOfflineMode && (
-        <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 rounded-md">
-          <p className="text-sm text-yellow-700 text-center">
-            ⚠️ Server connection slow है। Offline mode में registration होगी।
           </p>
         </div>
       )}
@@ -202,10 +189,10 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       <div className="mt-4 text-center">
         <p className="text-xs text-green-600 font-medium">
-          🔄 Smart Offline Registration System
+          🔥 Firebase Authentication System
         </p>
         <p className="text-xs text-gray-500 mt-1">
-          {isOfflineMode ? 'Offline mode active - सब कुछ काम कर रहा है!' : 'Real-time connectivity with offline backup'}
+          {isOfflineMode ? 'Offline mode active - सब कुछ काम कर रहा है!' : 'Reliable Firebase connectivity with offline backup'}
         </p>
       </div>
     </div>

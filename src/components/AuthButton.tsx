@@ -2,10 +2,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { useSupabaseAuth } from '@/contexts/auth/SupabaseAuthProvider';
+import { useFirebaseAuth } from '@/contexts/auth/FirebaseAuthProvider';
 
 const AuthButton = () => {
-  const { currentUser, logout, isAdmin } = useSupabaseAuth();
+  const { currentUser, logout, isAdmin } = useFirebaseAuth();
 
   if (currentUser) {
     return (

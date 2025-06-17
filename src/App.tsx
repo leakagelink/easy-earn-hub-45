@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import BottomBar from "./components/BottomBar";
-import { SupabaseAuthProvider } from "./contexts/auth/SupabaseAuthProvider";
+import { FirebaseAuthProvider } from "./contexts/auth/FirebaseAuthProvider";
 
 // Pages
 import Index from "./pages/Index";
@@ -39,7 +39,6 @@ const MaintenanceCheck = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const isMaintenanceMode = localStorage.getItem('maintenanceMode') === 'true';
   
-  // Don't show maintenance page for admin routes or if maintenance mode is off
   const isAdminRoute = location.pathname.startsWith('/admin');
   
   if (isMaintenanceMode && !isAdminRoute) {
@@ -51,7 +50,7 @@ const MaintenanceCheck = ({ children }: { children: React.ReactNode }) => {
 
 // AppRoutes component that contains all routes
 const AppRoutes = () => {
-  console.log('🔧 AppRoutes rendering...');
+  console.log('🔧 AppRoutes rendering with Firebase...');
   
   return (
     <MaintenanceCheck>
@@ -88,7 +87,7 @@ const AppRoutes = () => {
 };
 
 const App = () => {
-  console.log('🔧 App component rendering with Supabase...');
+  console.log('🔧 App component rendering with Firebase...');
   
   return (
     <QueryClientProvider client={queryClient}>
@@ -96,9 +95,9 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <SupabaseAuthProvider>
+          <FirebaseAuthProvider>
             <AppRoutes />
-          </SupabaseAuthProvider>
+          </FirebaseAuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
