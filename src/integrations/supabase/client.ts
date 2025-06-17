@@ -23,7 +23,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
       'apikey': SUPABASE_PUBLISHABLE_KEY,
       'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
     },
-    fetch: (url, options = {}) => {
+    fetch: (url: string, options: RequestInit = {}) => {
       console.log('Supabase request to:', url);
       
       return fetch(url, {

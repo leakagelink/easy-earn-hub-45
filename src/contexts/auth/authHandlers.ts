@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { getSupabaseErrorMessage } from './errorUtils';
 import { setUserStorage, clearUserStorage, checkIsAdmin } from './storageUtils';
@@ -93,8 +92,7 @@ export const handleRegister = async (
       console.error('Supabase signup error:', error);
       console.error('Error details:', {
         message: error.message,
-        status: error.status,
-        statusText: error.statusText
+        status: error.status
       });
       throw error;
     }
