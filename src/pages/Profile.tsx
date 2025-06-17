@@ -10,7 +10,9 @@ import { User, Mail, Phone, Key } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/auth";
-import { supabase } from "@/integrations/supabase/client";
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { db } from '@/lib/firebase';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -48,17 +50,10 @@ const Profile = () => {
     try {
       setIsLoadingProfile(true);
       
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', currentUser?.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-        throw error;
-      }
-
-      if (profile) {
+      const profileDoc = await getDoc(doc(db, 'profiles', currentUser?.uid || ''));
+      
+      if (profileDoc.exists()) {
+        const profile = profileDoc.data();
         setEmail(profile.email || '');
         setPhone(profile.phone || '');
       } else {
@@ -92,17 +87,12 @@ const Profile = () => {
     setIsUpdatingProfile(true);
     
     try {
-      // Update or insert profile
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: currentUser?.id,
-          email,
-          phone,
-          updated_at: new Date().toISOString(),
-        });
-
-      if (error) throw error;
+      // Update or create profile in Firestore
+      await setDoc(doc(db, 'profiles', currentUser?.uid || ''), {
+        email,
+        phone,
+        updatedAt: new Date(),
+      }, { merge: true });
       
       toast({
         title: "Profile updated successfully",
@@ -150,11 +140,16 @@ const Profile = () => {
     setIsChangingPassword(true);
     
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
+      if (!currentUser?.email) {
+        throw new Error('No user email found');
+      }
 
-      if (error) throw error;
+      // Re-authenticate user before changing password
+      const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
+      await reauthenticateWithCredential(currentUser, credential);
+
+      // Update password
+      await updatePassword(currentUser, newPassword);
       
       toast({
         title: "Password changed successfully",

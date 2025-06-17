@@ -8,20 +8,19 @@ import { ArrowUp, ArrowDown, Wallet, Users, History } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/auth";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface Investment {
   id: string;
-  plan_id: string;
+  planId: string;
   amount: number;
   status: string;
-  purchase_date: string;
-  expiry_date: string;
-  investment_plans: {
-    name: string;
-    daily_profit: number;
-  };
+  purchaseDate: string;
+  expiryDate: string;
+  planName: string;
+  dailyProfit: number;
 }
 
 interface Transaction {
@@ -29,7 +28,7 @@ interface Transaction {
   type: string;
   amount: number;
   status: string;
-  created_at: string;
+  createdAt: string;
 }
 
 const Dashboard = () => {
@@ -62,35 +61,35 @@ const Dashboard = () => {
       setIsLoading(true);
       
       // Fetch user investments
-      const { data: investmentsData, error: investmentsError } = await supabase
-        .from('user_investments')
-        .select(`
-          *,
-          investment_plans (
-            name,
-            daily_profit
-          )
-        `)
-        .eq('user_id', currentUser?.id);
-
-      if (investmentsError) throw investmentsError;
-      setInvestments(investmentsData || []);
+      const investmentsQuery = query(
+        collection(db, 'userInvestments'),
+        where('userId', '==', currentUser?.uid)
+      );
+      const investmentsSnapshot = await getDocs(investmentsQuery);
+      const investmentsData = investmentsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Investment[];
+      setInvestments(investmentsData);
 
       // Fetch user transactions
-      const { data: transactionsData, error: transactionsError } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', currentUser?.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (transactionsError) throw transactionsError;
-      setTransactions(transactionsData || []);
+      const transactionsQuery = query(
+        collection(db, 'transactions'),
+        where('userId', '==', currentUser?.uid),
+        orderBy('createdAt', 'desc'),
+        limit(10)
+      );
+      const transactionsSnapshot = await getDocs(transactionsQuery);
+      const transactionsData = transactionsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Transaction[];
+      setTransactions(transactionsData);
 
       // Calculate totals
-      const totalInvested = investmentsData?.reduce((sum, inv) => sum + Number(inv.amount), 0) || 0;
-      const totalEarnings = transactionsData?.filter(t => t.type === 'earning')
-        .reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+      const totalInvested = investmentsData.reduce((sum, inv) => sum + Number(inv.amount), 0);
+      const totalEarnings = transactionsData.filter(t => t.type === 'earning')
+        .reduce((sum, t) => sum + Number(t.amount), 0);
       
       setBalance(totalInvested + totalEarnings);
       setTotalEarned(totalEarnings);
@@ -108,7 +107,7 @@ const Dashboard = () => {
   };
 
   const dailyProfit = investments.reduce((sum, inv) => {
-    return sum + (inv.investment_plans?.daily_profit || 0);
+    return sum + (inv.dailyProfit || 0);
   }, 0);
 
   const referralEarnings = transactions
@@ -224,7 +223,7 @@ const Dashboard = () => {
                         {transactions.map((transaction) => (
                           <tr key={transaction.id} className="border-b">
                             <td className="py-3 px-4">
-                              {new Date(transaction.created_at).toLocaleDateString()}
+                              {new Date(transaction.createdAt).toLocaleDateString()}
                             </td>
                             <td className="py-3 px-4 capitalize">{transaction.type}</td>
                             <td className={`py-3 px-4 text-right ${
@@ -283,13 +282,13 @@ const Dashboard = () => {
                         {investments.map((investment) => (
                           <tr key={investment.id} className="border-b">
                             <td className="py-3 px-4">
-                              {investment.investment_plans?.name || 'Unknown Plan'}
+                              {investment.planName || 'Unknown Plan'}
                             </td>
                             <td className="py-3 px-4 text-right">
                               ₹{Number(investment.amount).toLocaleString()}
                             </td>
                             <td className="py-3 px-4 text-right text-green-500">
-                              ₹{investment.investment_plans?.daily_profit || 0}
+                              ₹{investment.dailyProfit || 0}
                             </td>
                             <td className="py-3 px-4">
                               <span className={`px-2 py-1 rounded-full text-xs ${
@@ -301,7 +300,7 @@ const Dashboard = () => {
                               </span>
                             </td>
                             <td className="py-3 px-4">
-                              {new Date(investment.purchase_date).toLocaleDateString()}
+                              {new Date(investment.purchaseDate).toLocaleDateString()}
                             </td>
                           </tr>
                         ))}

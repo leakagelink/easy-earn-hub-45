@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/components/ui/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { collection, addDoc, doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 const Payment = () => {
   const navigate = useNavigate();
@@ -37,42 +38,33 @@ const Payment = () => {
     setIsProcessing(true);
 
     try {
-      // Get the current user's profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', currentUser.id)
-        .single();
-
-      if (!profile) {
+      // Check if user profile exists
+      const profileDoc = await getDoc(doc(db, 'profiles', currentUser.uid));
+      
+      if (!profileDoc.exists()) {
         throw new Error('User profile not found');
       }
 
-      // Add investment to user_investments table
-      const { error: investmentError } = await supabase
-        .from('user_investments')
-        .insert({
-          user_id: currentUser.id,
-          plan_id: selectedPlan.id,
-          amount: selectedPlan.price,
-          status: 'active',
-          purchase_date: new Date().toISOString(),
-          expiry_date: new Date(Date.now() + selectedPlan.validityDays * 24 * 60 * 60 * 1000).toISOString()
-        });
-
-      if (investmentError) throw investmentError;
+      // Add investment to userInvestments collection
+      await addDoc(collection(db, 'userInvestments'), {
+        userId: currentUser.uid,
+        planId: selectedPlan.id,
+        planName: selectedPlan.name,
+        amount: selectedPlan.price,
+        dailyProfit: selectedPlan.dailyProfit,
+        status: 'active',
+        purchaseDate: new Date().toISOString(),
+        expiryDate: new Date(Date.now() + selectedPlan.validityDays * 24 * 60 * 60 * 1000).toISOString()
+      });
 
       // Add transaction record
-      const { error: transactionError } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: currentUser.id,
-          type: 'recharge',
-          amount: selectedPlan.price,
-          status: 'completed'
-        });
-
-      if (transactionError) throw transactionError;
+      await addDoc(collection(db, 'transactions'), {
+        userId: currentUser.uid,
+        type: 'recharge',
+        amount: selectedPlan.price,
+        status: 'completed',
+        createdAt: new Date().toISOString()
+      });
 
       // Clear selected plan from localStorage
       localStorage.removeItem('selectedPlan');
