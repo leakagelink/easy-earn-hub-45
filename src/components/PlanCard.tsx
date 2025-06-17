@@ -29,19 +29,6 @@ const PlanCard: React.FC<PlanCardProps> = ({
 
   const handleChoosePlan = () => {
     console.log('Plan selection started for plan:', id);
-    
-    // Store selected plan in localStorage
-    const planData = {
-      id, 
-      name, 
-      price, 
-      dailyProfit: daily_profit, 
-      validityDays: validity_days, 
-      totalIncome: total_income
-    };
-    
-    localStorage.setItem('selectedPlan', JSON.stringify(planData));
-    console.log('Plan data stored:', planData);
 
     console.log('Current user status:', currentUser ? 'Logged in' : 'Not logged in');
 

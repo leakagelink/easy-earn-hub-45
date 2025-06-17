@@ -4,7 +4,6 @@ import { User, createUserWithEmailAndPassword, signInWithEmailAndPassword, signO
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/integrations/firebase/config';
 import { useToast } from '@/components/ui/use-toast';
-import { fallbackRegistration } from '@/utils/fallbackRegistration';
 
 interface FirebaseAuthContextType {
   currentUser: User | null;
@@ -13,8 +12,6 @@ interface FirebaseAuthContextType {
   logout: () => Promise<void>;
   loading: boolean;
   isAdmin: boolean;
-  networkStatus: any;
-  isOfflineMode: boolean;
 }
 
 const FirebaseAuthContext = createContext<FirebaseAuthContextType | undefined>(undefined);
@@ -30,32 +27,14 @@ export function useFirebaseAuth() {
 export function FirebaseAuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [networkStatus, setNetworkStatus] = useState<any>({ internet: true, firebase: true });
-  const [isOfflineMode, setIsOfflineMode] = useState(false);
   const { toast } = useToast();
 
   const isAdmin = user?.email === 'admin@easyearn.us';
 
   useEffect(() => {
-    // Check for offline user first
-    const offlineUser = fallbackRegistration.getCurrentOfflineUser();
-    if (offlineUser) {
-      setIsOfflineMode(true);
-      setUser({
-        uid: offlineUser.id,
-        email: offlineUser.email,
-        displayName: null,
-        photoURL: null,
-        emailVerified: false
-      } as User);
-      setLoading(false);
-      return;
-    }
-
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       console.log('🔑 Firebase Auth state changed:', user?.email);
       setUser(user);
-      setIsOfflineMode(false);
       setLoading(false);
     });
 
@@ -76,26 +55,6 @@ export function FirebaseAuthProvider({ children }: { children: React.ReactNode }
       
     } catch (error: any) {
       console.error('💥 Firebase login failed:', error);
-      
-      // Try offline login as fallback
-      const offlineUser = fallbackRegistration.loginOffline(email, password);
-      if (offlineUser) {
-        setUser({
-          uid: offlineUser.id,
-          email: offlineUser.email,
-          displayName: null,
-          photoURL: null,
-          emailVerified: false
-        } as User);
-        setIsOfflineMode(true);
-        
-        toast({
-          title: "✅ Offline login successful!",
-          description: "आप offline mode में login हैं।",
-        });
-        return;
-      }
-      
       throw new Error(getFirebaseErrorMessage(error));
     }
   };
@@ -104,11 +63,6 @@ export function FirebaseAuthProvider({ children }: { children: React.ReactNode }
     console.log('📝 Firebase registration attempt for:', email);
     
     try {
-      // Check if user already exists offline
-      if (fallbackRegistration.userExistsOffline(email)) {
-        throw new Error('यह email पहले से registered है।');
-      }
-
       const userCredential = await createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
       
       // Save additional user data to Firestore
@@ -129,23 +83,7 @@ export function FirebaseAuthProvider({ children }: { children: React.ReactNode }
       
     } catch (error: any) {
       console.error('💥 Firebase registration failed:', error);
-      
-      // Fallback to offline registration
-      const offlineUser = fallbackRegistration.saveUserOffline(email, password, phone, referralCode);
-      
-      setUser({
-        uid: offlineUser.id,
-        email: offlineUser.email,
-        displayName: null,
-        photoURL: null,
-        emailVerified: false
-      } as User);
-      setIsOfflineMode(true);
-
-      toast({
-        title: "✅ Registration successful! (Offline)",
-        description: "Account offline mode में बन गया है।",
-      });
+      throw new Error(getFirebaseErrorMessage(error));
     }
   };
 
@@ -153,23 +91,13 @@ export function FirebaseAuthProvider({ children }: { children: React.ReactNode }
     console.log('🚪 Firebase logout...');
     
     try {
-      if (isOfflineMode) {
-        fallbackRegistration.clearOfflineSession();
-        setUser(null);
-        setIsOfflineMode(false);
-      } else {
-        await signOut(auth);
-      }
-      
-      localStorage.removeItem('selectedPlan');
+      await signOut(auth);
       console.log('✅ Logout successful');
       window.location.href = '/';
       
     } catch (error: any) {
       console.error('💥 Logout failed:', error);
       setUser(null);
-      setIsOfflineMode(false);
-      localStorage.removeItem('selectedPlan');
       window.location.href = '/';
     }
   };
@@ -180,9 +108,7 @@ export function FirebaseAuthProvider({ children }: { children: React.ReactNode }
     register,
     logout,
     loading,
-    isAdmin,
-    networkStatus,
-    isOfflineMode
+    isAdmin
   };
 
   return (

@@ -1,8 +1,8 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
 import { useFirebaseAuth } from '@/contexts/auth/FirebaseAuthProvider';
-import NetworkStatus from '@/components/NetworkStatus';
 import LoginOptions from './auth/LoginOptions';
 import PhoneInput from './auth/PhoneInput';
 import EmailInput from './auth/EmailInput';
@@ -29,7 +29,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { login, register, networkStatus, isOfflineMode } = useFirebaseAuth();
+  const { login, register } = useFirebaseAuth();
   
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -86,36 +86,20 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         console.log('🔑 Attempting Firebase login with:', loginEmail);
         await login(loginEmail, password);
         
-        navigate(localStorage.getItem('selectedPlan') ? '/payment' : '/invest');
+        navigate('/invest');
       } else {
         console.log('📝 Attempting Firebase registration...');
         
         await register(email, password, phone, referralCode);
         
-        if (selectedPlan) {
-          localStorage.setItem('selectedPlan', selectedPlan);
-        }
+        toast({
+          title: "✅ Registration Successful!",
+          description: "Account बन गया! Dashboard पर जा रहे हैं।",
+        });
         
-        // Show success message and redirect
-        if (isOfflineMode) {
-          toast({
-            title: "✅ Registration Successful! (Offline)",
-            description: "Account offline mode में बन गया! Dashboard पर जा रहे हैं।",
-          });
-          
-          setTimeout(() => {
-            navigate('/invest');
-          }, 2000);
-        } else {
-          toast({
-            title: "✅ Registration Successful!",
-            description: "Account बन गया! Dashboard पर जा रहे हैं।",
-          });
-          
-          setTimeout(() => {
-            navigate('/invest');
-          }, 2000);
-        }
+        setTimeout(() => {
+          navigate('/invest');
+        }, 2000);
       }
     } catch (error: any) {
       console.error('💥 Firebase Auth error:', error);
@@ -140,16 +124,6 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         <div className="mb-6 p-3 bg-easyearn-purple/10 rounded-md">
           <p className="text-sm text-center text-easyearn-purple">
             आप Plan {selectedPlan} के लिए register कर रहे हैं
-          </p>
-        </div>
-      )}
-      
-      <NetworkStatus />
-      
-      {isOfflineMode && (
-        <div className="mb-4 p-3 bg-green-100 border border-green-300 rounded-md">
-          <p className="text-sm text-green-700 text-center">
-            ✅ आप offline mode में हैं। सब कुछ काम कर रहा है!
           </p>
         </div>
       )}
@@ -192,7 +166,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
           🔥 Firebase Authentication System
         </p>
         <p className="text-xs text-gray-500 mt-1">
-          {isOfflineMode ? 'Offline mode active - सब कुछ काम कर रहा है!' : 'Reliable Firebase connectivity with offline backup'}
+          Secure and reliable Firebase connectivity
         </p>
       </div>
     </div>
