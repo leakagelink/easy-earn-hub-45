@@ -85,53 +85,6 @@ export const validateRegistrationData = (email: string, password: string, phone:
   return null;
 };
 
-// Create admin fallback user for admin panel access
-export const createAdminFallbackUser = (email: string) => {
-  const userData = {
-    id: 'admin-' + Date.now().toString(),
-    email: email.trim().toLowerCase(),
-    phone: '+919876543210',
-    referralCode: 'ADMIN',
-    createdAt: new Date().toISOString(),
-    verified: true
-  };
-  
-  localStorage.setItem('currentUser', JSON.stringify(userData));
-  localStorage.setItem('isLoggedIn', 'true');
-  localStorage.setItem('isAdmin', 'true');
-  
-  return { user: userData, session: null };
-};
-
-// Fallback registration using localStorage (only as last resort)
-export const fallbackRegister = (email: string, password: string, phone: string, referralCode?: string) => {
-  console.log('Using fallback registration as last resort...');
-  
-  const userData = {
-    id: Date.now().toString(),
-    email: email.trim().toLowerCase(),
-    phone: phone.trim().replace(/\D/g, ''),
-    referralCode: referralCode?.trim() || '',
-    createdAt: new Date().toISOString(),
-    verified: false
-  };
-  
-  // Store in localStorage as backup
-  const existingUsers = JSON.parse(localStorage.getItem('fallbackUsers') || '[]');
-  const userExists = existingUsers.find((user: any) => user.email === userData.email);
-  
-  if (userExists) {
-    throw new Error('यह email पहले से registered है। Login करने की कोशिश करें।');
-  }
-  
-  existingUsers.push(userData);
-  localStorage.setItem('fallbackUsers', JSON.stringify(existingUsers));
-  localStorage.setItem('currentUser', JSON.stringify(userData));
-  localStorage.setItem('isLoggedIn', 'true');
-  
-  return { user: userData, session: null };
-};
-
 export const registerUser = async (email: string, password: string, phone: string, referralCode?: string) => {
   console.log('Starting registration process with Supabase...');
   
@@ -163,26 +116,11 @@ export const registerUser = async (email: string, password: string, phone: strin
 
     if (error) {
       console.error('Supabase registration error:', error);
-      
-      // Check if it's a network/connection issue
-      if (error.message?.includes('fetch') || 
-          error.message?.includes('network') || 
-          error.message?.includes('Failed to fetch') ||
-          error.message?.includes('NetworkError')) {
-        console.log('Network error detected, using fallback...');
-        return fallbackRegister(cleanEmail, password, cleanPhone, referralCode);
-      }
-      
-      // For other errors, throw them directly
       throw error;
     }
 
     if (data.user) {
       console.log('Supabase registration successful:', data.user.email);
-      
-      // Wait a moment for the user to be properly created
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       return data;
     } else {
       throw new Error('Registration failed - no user returned');
@@ -190,17 +128,6 @@ export const registerUser = async (email: string, password: string, phone: strin
     
   } catch (error: any) {
     console.error('Registration failed:', error);
-    
-    // Only use fallback for network issues, not validation or auth errors
-    if (error.message?.includes('fetch') || 
-        error.message?.includes('network') || 
-        error.message?.includes('NetworkError') ||
-        error.message?.includes('Failed to fetch')) {
-      console.log('Network issue detected, using fallback registration...');
-      return fallbackRegister(cleanEmail, password, cleanPhone, referralCode);
-    }
-    
-    // For validation/auth errors, throw the processed error
     const authError = getErrorMessage(error);
     throw new Error(authError.message);
   }
@@ -211,32 +138,10 @@ export const loginUser = async (email: string, password: string) => {
   
   const cleanEmail = email.trim().toLowerCase();
   
-  // Special handling for admin login
-  if (cleanEmail === 'admin@easyearn.us' && password === 'Easy@123') {
-    console.log('Admin login attempt detected');
-    
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password: password
-      });
-
-      if (error) {
-        console.log('Supabase admin login failed, using fallback:', error.message);
-        // Create admin fallback user for admin panel access
-        return createAdminFallbackUser(cleanEmail);
-      }
-
-      console.log('Supabase admin login successful:', data.user?.email);
-      return data;
-    } catch (error: any) {
-      console.log('Supabase connection failed for admin, using fallback:', error.message);
-      // Create admin fallback user for admin panel access
-      return createAdminFallbackUser(cleanEmail);
-    }
-  }
-  
   try {
+    // Clear any existing auth state first
+    await supabase.auth.signOut();
+    
     const { data, error } = await supabase.auth.signInWithPassword({
       email: cleanEmail,
       password: password
@@ -244,18 +149,6 @@ export const loginUser = async (email: string, password: string) => {
 
     if (error) {
       console.error('Supabase login error:', error);
-      
-      // Try fallback login only if Supabase fails
-      const fallbackUsers = JSON.parse(localStorage.getItem('fallbackUsers') || '[]');
-      const user = fallbackUsers.find((u: any) => u.email === cleanEmail);
-      
-      if (user) {
-        console.log('Using fallback login for:', user.email);
-        localStorage.setItem('currentUser', JSON.stringify(user));
-        localStorage.setItem('isLoggedIn', 'true');
-        return { user, session: null };
-      }
-      
       throw error;
     }
 

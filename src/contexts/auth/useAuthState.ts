@@ -2,9 +2,7 @@
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { cleanupAuthState } from '@/utils/authCleanup';
 import { ExtendedUser } from './types';
-import { createFallbackUser, isAdminUser, getFallbackUserFromStorage } from './authHelpers';
 
 export const useAuthState = () => {
   const [currentUser, setCurrentUser] = useState<ExtendedUser | null>(null);
@@ -13,13 +11,13 @@ export const useAuthState = () => {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    console.log('Setting up auth state listener...');
+    console.log('Setting up Supabase auth state listener...');
     
     let mounted = true;
     
     // Set up auth state listener for Supabase
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         if (!mounted) return;
         
         console.log('Auth state changed:', event, session?.user?.email || 'No user');
@@ -29,35 +27,35 @@ export const useAuthState = () => {
           setCurrentUser(session.user);
           
           const userEmail = session.user.email || '';
-          const userName = session.user.user_metadata?.name || userEmail.split('@')[0];
-          const isAdminUserFlag = isAdminUser(userEmail);
+          const isAdminUser = userEmail === 'admin@easyearn.us';
+          setIsAdmin(isAdminUser);
           
-          localStorage.setItem('isLoggedIn', 'true');
-          localStorage.setItem('userEmail', userEmail);
-          localStorage.setItem('userName', userName);
-          
-          if (isAdminUserFlag) {
-            localStorage.setItem('isAdmin', 'true');
-            setIsAdmin(true);
-          } else {
-            localStorage.removeItem('isAdmin');
-            setIsAdmin(false);
+          // Create or update profile in database
+          if (event === 'SIGNED_IN') {
+            setTimeout(async () => {
+              try {
+                const { error } = await supabase
+                  .from('profiles')
+                  .upsert({
+                    id: session.user.id,
+                    email: userEmail,
+                    phone: session.user.user_metadata?.phone || null
+                  }, {
+                    onConflict: 'id'
+                  });
+                
+                if (error) {
+                  console.error('Error creating/updating profile:', error);
+                }
+              } catch (error) {
+                console.error('Profile upsert error:', error);
+              }
+            }, 0);
           }
         } else {
-          // Check for fallback user only if no Supabase session
-          const fallbackUser = getFallbackUserFromStorage();
-          
-          if (fallbackUser) {
-            console.log('Found fallback user:', fallbackUser.email);
-            setCurrentUser(fallbackUser);
-            setSession(null); // No session for fallback users
-            setIsAdmin(isAdminUser(fallbackUser.email));
-          } else {
-            cleanupAuthState();
-            setCurrentUser(null);
-            setSession(null);
-            setIsAdmin(false);
-          }
+          setCurrentUser(null);
+          setSession(null);
+          setIsAdmin(false);
         }
         
         setLoading(false);
@@ -72,16 +70,7 @@ export const useAuthState = () => {
         console.log('Initial Supabase session found:', session.user.email);
         setSession(session);
         setCurrentUser(session.user);
-      } else {
-        // Check for fallback user
-        const fallbackUser = getFallbackUserFromStorage();
-        
-        if (fallbackUser) {
-          console.log('Initial fallback user found:', fallbackUser.email);
-          setCurrentUser(fallbackUser);
-          setSession(null);
-          setIsAdmin(isAdminUser(fallbackUser.email));
-        }
+        setIsAdmin(session.user.email === 'admin@easyearn.us');
       }
       
       setLoading(false);

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
@@ -84,28 +85,22 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
           description: "Welcome back!",
         });
         
-        setTimeout(() => {
-          const selectedPlan = localStorage.getItem('selectedPlan');
-          if (selectedPlan) {
-            navigate('/payment');
-          } else {
-            navigate('/invest');
-          }
-        }, 1000);
+        // Check if user was trying to buy a plan
+        const selectedPlan = localStorage.getItem('selectedPlan');
+        if (selectedPlan) {
+          navigate('/payment');
+        } else {
+          navigate('/invest');
+        }
         
       } else {
         console.log('Attempting registration with Supabase...');
         
-        const result = await register(email.trim(), password, phone.trim(), referralCode.trim());
-        
-        // Check if registration was successful with Supabase or fallback
-        const isSupabaseUser = result.session && 'access_token' in result.session;
+        await register(email.trim(), password, phone.trim(), referralCode.trim());
         
         toast({
           title: "Registration successful! ✅",
-          description: isSupabaseUser 
-            ? "Account Supabase में बन गया है! Email verify करें।" 
-            : "Account बन गया है। अब आप login कर सकते हैं।",
+          description: "Account बन गया है! अब आप login कर सकते हैं।",
         });
         
         if (selectedPlan) {
@@ -120,12 +115,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         setReferralCode('');
         
         setTimeout(() => {
-          if (isSupabaseUser) {
-            // For Supabase users, redirect to login to complete email verification
-            navigate('/login');
-          } else {
-            navigate('/login');
-          }
+          navigate('/login');
         }, 2000);
       }
       
@@ -195,7 +185,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       <div className="mt-4 text-center">
         <p className="text-xs text-green-600 font-medium">
-          ✅ Supabase registration active - आपका data secure रहेगा!
+          ✅ Fully connected to Supabase - आपका data secure है!
         </p>
       </div>
     </div>
