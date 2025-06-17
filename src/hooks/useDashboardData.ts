@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useFirebaseAuth } from '@/contexts/auth/FirebaseAuthProvider';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
@@ -9,6 +10,19 @@ export const useDashboardData = () => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const { currentUser } = useFirebaseAuth();
+
+  // Calculate derived values
+  const totalEarned = transactions.reduce((sum: number, tx: any) => {
+    return tx.type === 'profit' ? sum + tx.amount : sum;
+  }, 0);
+
+  const dailyProfit = investments.reduce((sum: number, inv: any) => {
+    return sum + (inv.daily_profit || 0);
+  }, 0);
+
+  const referralEarnings = transactions.reduce((sum: number, tx: any) => {
+    return tx.type === 'referral' ? sum + tx.amount : sum;
+  }, 0);
 
   useEffect(() => {
     if (!currentUser?.uid) return;
@@ -63,7 +77,11 @@ export const useDashboardData = () => {
     balance,
     investments,
     transactions,
+    totalEarned,
+    dailyProfit,
+    referralEarnings,
     loading,
+    isLoading: loading,
     refetch: () => {
       // Refetch logic would go here
     }

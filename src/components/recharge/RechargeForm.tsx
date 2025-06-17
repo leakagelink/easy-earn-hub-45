@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/auth";
-import { createPaymentRequest } from '@/services/appwriteService';
+import { firebaseService } from '@/services/firebaseService';
 import { Wallet } from "lucide-react";
 import QuickAmountButtons from './QuickAmountButtons';
 
@@ -59,27 +59,27 @@ const RechargeForm = () => {
     setIsSubmitting(true);
     
     try {
-      console.log('Submitting recharge request with Appwrite:', {
-        user_id: currentUser.$id,
+      console.log('Submitting recharge request with Firebase:', {
+        user_id: currentUser.id,
         amount: Number(amount),
         transaction_id: transactionId || 'UPI Payment',
         payment_method: paymentMethod
       });
 
-      const { data, error } = await createPaymentRequest({
-        user_id: currentUser.$id,
+      const result = await firebaseService.createPaymentRequest({
+        user_id: currentUser.id,
         plan_id: null,
         amount: Number(amount),
         transaction_id: transactionId || 'UPI Payment',
         payment_method: paymentMethod
       });
 
-      if (error) {
-        console.error('Recharge request submission error:', error);
-        throw error;
+      if (!result.success) {
+        console.error('Recharge request submission error:', result.error);
+        throw result.error;
       }
 
-      console.log('Recharge request submitted successfully:', data);
+      console.log('Recharge request submitted successfully:', result);
       toast({
         title: "Recharge request submitted",
         description: `Your recharge request for ₹${amount} has been submitted for verification.`,

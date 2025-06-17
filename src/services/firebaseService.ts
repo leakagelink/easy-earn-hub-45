@@ -82,5 +82,20 @@ export const firebaseService = {
       console.error('Error updating payment request:', error);
       return { success: false, error };
     }
+  },
+
+  // Plan operations
+  async purchasePlan(planData: any) {
+    try {
+      const docRef = await addDoc(collection(db, 'paymentRequests'), {
+        ...planData,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      });
+      return { success: true, id: docRef.id };
+    } catch (error) {
+      console.error('Error purchasing plan:', error);
+      return { success: false, error };
+    }
   }
 };

@@ -9,7 +9,17 @@ export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
     // Fallback to Firebase auth if main auth context is not available
-    return useFirebaseAuth() as AuthContextType;
+    const firebaseAuth = useFirebaseAuth();
+    return {
+      user: firebaseAuth.currentUser,
+      currentUser: firebaseAuth.currentUser,
+      login: firebaseAuth.login,
+      logout: firebaseAuth.logout,
+      register: firebaseAuth.register,
+      loading: firebaseAuth.loading,
+      userProfile: null, // Add missing property
+      isAdmin: firebaseAuth.isAdmin
+    } as AuthContextType;
   }
   return context;
 }
@@ -19,11 +29,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   // Convert Firebase auth to match AuthContextType interface
   const value: AuthContextType = {
-    user: firebaseAuth.currentUser,
+    currentUser: firebaseAuth.currentUser,
     login: firebaseAuth.login,
     logout: firebaseAuth.logout,
     register: firebaseAuth.register,
     loading: firebaseAuth.loading,
+    userProfile: null, // Add missing property
+    isAdmin: firebaseAuth.isAdmin
   };
 
   return (
