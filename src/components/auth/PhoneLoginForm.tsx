@@ -1,9 +1,7 @@
-
 import React from 'react';
 import PhoneInput from './PhoneInput';
 import PasswordField from './PasswordField';
 import LoginActionSection from './LoginActionSection';
-import { LoginMethod } from './useLoginForm';
 
 interface PhoneLoginFormProps {
   phone: string;
