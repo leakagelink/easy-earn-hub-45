@@ -9,13 +9,17 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    console.error('useAuth must be used within an AuthProvider');
+    console.error('🔥 useAuth called outside AuthProvider! Current location:', window.location.pathname);
+    console.error('🔥 AuthContext value:', context);
+    console.error('🔥 Make sure AuthProvider wraps your app properly');
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  console.log('🔧 AuthProvider rendering...');
+  
   const {
     currentUser,
     session,
@@ -26,7 +30,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsAdmin
   } = useAuthState();
 
-  console.log('AuthProvider rendering with loading:', loading, 'currentUser:', currentUser?.email);
+  console.log('AuthProvider state:', { 
+    loading, 
+    currentUser: currentUser?.email || 'none',
+    session: !!session 
+  });
 
   const { login, register, logout } = createAuthOperations({
     setCurrentUser,
@@ -42,6 +50,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     isAdmin
   };
+
+  console.log('🔧 AuthProvider providing context with value keys:', Object.keys(value));
 
   return (
     <AuthContext.Provider value={value}>

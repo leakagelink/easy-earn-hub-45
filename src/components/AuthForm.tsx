@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
@@ -17,6 +16,32 @@ interface AuthFormProps {
 }
 
 const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
+  console.log('🔧 AuthForm rendering with mode:', mode);
+  
+  // Add safety check for auth context
+  let authContext;
+  try {
+    authContext = useAuth();
+    console.log('✅ Auth context loaded successfully');
+  } catch (error) {
+    console.error('❌ Failed to load auth context:', error);
+    return (
+      <div className="mx-auto w-full max-w-md p-6 bg-white rounded-lg shadow-md">
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-red-600 mb-4">Authentication Error</h2>
+          <p className="text-gray-600">Auth system loading करने में problem हो रही है...</p>
+          <p className="text-sm text-gray-500 mt-2">Page refresh करके try करें</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -27,7 +52,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { login, register } = useAuth();
+  const { login, register } = authContext;
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -151,7 +176,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       <div className="mt-4 text-center">
         <p className="text-xs text-green-600 font-medium">
-          🔧 Network optimized Supabase client with retry mechanism
+          🔧 Network optimized with error handling
         </p>
       </div>
     </div>
