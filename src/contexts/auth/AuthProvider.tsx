@@ -12,6 +12,8 @@ export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
     console.error('useAuth must be used within an AuthProvider');
+    console.error('Current context:', context);
+    console.error('AuthContext:', AuthContext);
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
@@ -144,6 +146,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     isAdmin
   };
+
+  console.log('AuthProvider providing context value:', value);
 
   return (
     <AuthContext.Provider value={value}>

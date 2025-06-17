@@ -27,7 +27,30 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { login, register } = useAuth();
+  
+  // Add error boundary for auth context
+  let authContext;
+  try {
+    authContext = useAuth();
+  } catch (error) {
+    console.error('Failed to get auth context:', error);
+    return (
+      <div className="mx-auto w-full max-w-md p-6 bg-white rounded-lg shadow-md">
+        <div className="text-center text-red-600">
+          <h2 className="text-xl font-bold mb-4">Authentication Error</h2>
+          <p>प्रमाणीकरण सेवा उपलब्ध नहीं है। पेज refresh करें।</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  const { login, register } = authContext;
   
   const validateForm = () => {
     if (mode === 'login') {
