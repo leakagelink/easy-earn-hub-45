@@ -9,8 +9,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/components/ui/use-toast";
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Investment {
   id: string;
@@ -61,38 +60,55 @@ const Dashboard = () => {
       setIsLoading(true);
       
       // Fetch user investments
-      const investmentsQuery = query(
-        collection(db, 'userInvestments'),
-        where('userId', '==', currentUser?.uid)
-      );
-      const investmentsSnapshot = await getDocs(investmentsQuery);
-      const investmentsData = investmentsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Investment[];
-      setInvestments(investmentsData);
+      const { data: investmentsData, error: investmentsError } = await supabase
+        .from('user_investments')
+        .select('*')
+        .eq('user_id', currentUser?.id);
+
+      if (investmentsError) {
+        console.error('Error fetching investments:', investmentsError);
+      } else {
+        const formattedInvestments = investmentsData?.map(inv => ({
+          id: inv.id,
+          planId: inv.plan_id || '',
+          amount: inv.amount || 0,
+          status: inv.status || 'active',
+          purchaseDate: inv.purchase_date || '',
+          expiryDate: inv.expiry_date || '',
+          planName: `Plan ${inv.plan_id}`,
+          dailyProfit: inv.daily_profit || 0
+        })) || [];
+        setInvestments(formattedInvestments);
+      }
 
       // Fetch user transactions
-      const transactionsQuery = query(
-        collection(db, 'transactions'),
-        where('userId', '==', currentUser?.uid),
-        orderBy('createdAt', 'desc'),
-        limit(10)
-      );
-      const transactionsSnapshot = await getDocs(transactionsQuery);
-      const transactionsData = transactionsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Transaction[];
-      setTransactions(transactionsData);
+      const { data: transactionsData, error: transactionsError } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', currentUser?.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
 
-      // Calculate totals
-      const totalInvested = investmentsData.reduce((sum, inv) => sum + Number(inv.amount), 0);
-      const totalEarnings = transactionsData.filter(t => t.type === 'earning')
-        .reduce((sum, t) => sum + Number(t.amount), 0);
-      
-      setBalance(totalInvested + totalEarnings);
-      setTotalEarned(totalEarnings);
+      if (transactionsError) {
+        console.error('Error fetching transactions:', transactionsError);
+      } else {
+        const formattedTransactions = transactionsData?.map(t => ({
+          id: t.id,
+          type: t.type || '',
+          amount: t.amount || 0,
+          status: t.status || 'pending',
+          createdAt: t.created_at || ''
+        })) || [];
+        setTransactions(formattedTransactions);
+
+        // Calculate totals
+        const totalInvested = formattedInvestments.reduce((sum, inv) => sum + Number(inv.amount), 0);
+        const totalEarnings = formattedTransactions.filter(t => t.type === 'earning')
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+        
+        setBalance(totalInvested + totalEarnings);
+        setTotalEarned(totalEarnings);
+      }
 
     } catch (error: any) {
       console.error('Error fetching user data:', error);
