@@ -14,10 +14,10 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     flowType: 'pkce'
   },
   global: {
-    fetch: (url, options = {}) => {
+    fetch: (url: RequestInfo | URL, options: RequestInit = {}): Promise<Response> => {
       console.log('🌐 Supabase fetch request:', url);
       
-      const timeoutPromise = new Promise((_, reject) =>
+      const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Request timeout after 30 seconds')), 30000)
       );
       
@@ -27,10 +27,10 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
           ...options.headers,
           'Content-Type': 'application/json',
         },
-      }).then(response => {
+      }).then((response: Response) => {
         console.log(`✅ Response status: ${response.status}`);
         return response;
-      }).catch(error => {
+      }).catch((error: Error) => {
         console.error('❌ Fetch error:', error);
         throw error;
       });
