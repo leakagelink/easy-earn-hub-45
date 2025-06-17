@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
@@ -16,20 +17,20 @@ interface AuthFormProps {
 }
 
 const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
-  console.log('🔧 AuthForm rendering with mode:', mode);
+  console.log('🔥 Firebase AuthForm rendering with mode:', mode);
   
   // Add safety check for auth context
   let authContext;
   try {
     authContext = useAuth();
-    console.log('✅ Auth context loaded successfully');
+    console.log('✅ Firebase Auth context loaded successfully');
   } catch (error) {
-    console.error('❌ Failed to load auth context:', error);
+    console.error('❌ Failed to load Firebase auth context:', error);
     return (
       <div className="mx-auto w-full max-w-md p-6 bg-white rounded-lg shadow-md">
         <div className="text-center">
           <h2 className="text-xl font-bold text-red-600 mb-4">Authentication Error</h2>
-          <p className="text-gray-600">Auth system loading करने में problem हो रही है...</p>
+          <p className="text-gray-600">Firebase Auth system loading करने में problem हो रही है...</p>
           <p className="text-sm text-gray-500 mt-2">Page refresh करके try करें</p>
           <button 
             onClick={() => window.location.reload()} 
@@ -57,7 +58,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('📋 Form submission:', { mode, email, phone, loginMethod });
+    console.log('📋 Firebase form submission:', { mode, email, phone, loginMethod });
     
     // Validation
     if (!password) {
@@ -94,28 +95,28 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     try {
       if (mode === 'login') {
         const loginEmail = loginMethod === 'email' ? email : `${phone}@easyearn.com`;
-        console.log('🔑 Attempting login with:', loginEmail);
+        console.log('🔑 Attempting Firebase login with:', loginEmail);
         await login(loginEmail, password);
         
         toast({ 
           title: "✅ Login successful!",
-          description: "आपका login हो गया है"
+          description: "Firebase के साथ आपका login हो गया है"
         });
         navigate(localStorage.getItem('selectedPlan') ? '/payment' : '/invest');
       } else {
-        console.log('📝 Attempting registration...');
+        console.log('📝 Attempting Firebase registration...');
         await register(email, password, phone, referralCode);
         
         toast({ 
           title: "✅ Registration successful!", 
-          description: "Email verify करने के लिए check करें" 
+          description: "Firebase के साथ account बन गया है" 
         });
         
         if (selectedPlan) localStorage.setItem('selectedPlan', selectedPlan);
         navigate('/login');
       }
     } catch (error: any) {
-      console.error('💥 Auth error:', error);
+      console.error('💥 Firebase auth error:', error);
       
       toast({
         title: mode === 'login' ? "❌ Login Failed" : "❌ Registration Failed",
@@ -176,7 +177,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       <div className="mt-4 text-center">
         <p className="text-xs text-green-600 font-medium">
-          🔧 Network optimized with error handling
+          🔥 Powered by Firebase - Fast & Reliable
         </p>
       </div>
     </div>

@@ -18,27 +18,24 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  console.log('🔧 AuthProvider rendering...');
+  console.log('🔥 Firebase AuthProvider rendering...');
   
   const {
     currentUser,
-    session,
     loading,
     isAdmin,
     setCurrentUser,
-    setSession,
     setIsAdmin
   } = useAuthState();
 
-  console.log('AuthProvider state:', { 
+  console.log('Firebase AuthProvider state:', { 
     loading, 
     currentUser: currentUser?.email || 'none',
-    session: !!session 
+    isAdmin
   });
 
   const { login, register, logout } = createAuthOperations({
     setCurrentUser,
-    setSession,
     setIsAdmin
   });
 
@@ -51,7 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAdmin
   };
 
-  console.log('🔧 AuthProvider providing context with value keys:', Object.keys(value));
+  console.log('🔥 Firebase AuthProvider providing context with value keys:', Object.keys(value));
 
   return (
     <AuthContext.Provider value={value}>

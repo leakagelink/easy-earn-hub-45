@@ -1,5 +1,13 @@
 
-import { supabase } from '@/integrations/supabase/client';
+// Legacy auth service - now using Firebase directly
+// This file is kept for compatibility but all functions redirect to Firebase
+
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword,
+  signOut 
+} from 'firebase/auth';
+import { auth } from '@/integrations/firebase/client';
 
 export interface AuthError {
   message: string;
@@ -7,48 +15,49 @@ export interface AuthError {
 }
 
 export const getErrorMessage = (error: any): AuthError => {
-  console.log('Processing auth error:', error);
+  console.log('Processing Firebase auth error:', error);
   
-  if (error.message?.includes('Invalid login credentials')) {
-    return {
-      message: 'Email या password गलत है। फिर से try करें।',
-      type: 'auth'
-    };
+  const code = error.code || '';
+  
+  switch (code) {
+    case 'auth/invalid-credential':
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+      return {
+        message: 'Email या password गलत है। फिर से try करें।',
+        type: 'auth'
+      };
+    
+    case 'auth/email-already-in-use':
+      return {
+        message: 'यह email पहले से registered है। Login करने की कोशिश करें।',
+        type: 'auth'
+      };
+    
+    case 'auth/weak-password':
+      return {
+        message: 'Password कम से कम 6 characters का होना चाहिए।',
+        type: 'validation'
+      };
+    
+    case 'auth/invalid-email':
+      return {
+        message: 'सही email address डालें।',
+        type: 'validation'
+      };
+    
+    case 'auth/network-request-failed':
+      return {
+        message: 'Internet connection problem है। कुछ देर बाद try करें।',
+        type: 'network'
+      };
+    
+    default:
+      return {
+        message: error.message || 'कुछ गलत हुआ है। फिर से try करें।',
+        type: 'unknown'
+      };
   }
-  
-  if (error.message?.includes('User already registered')) {
-    return {
-      message: 'यह email पहले से registered है। Login करने की कोशिश करें।',
-      type: 'auth'
-    };
-  }
-  
-  if (error.message?.includes('Password should be at least 6 characters')) {
-    return {
-      message: 'Password कम से कम 6 characters का होना चाहिए।',
-      type: 'validation'
-    };
-  }
-  
-  if (error.message?.includes('Invalid email')) {
-    return {
-      message: 'सही email address डालें।',
-      type: 'validation'
-    };
-  }
-  
-  // Network/fetch errors
-  if (error.message?.includes('fetch') || error.message?.includes('network') || error.message?.includes('Failed to fetch')) {
-    return {
-      message: 'Internet connection problem है। कुछ देर बाद try करें।',
-      type: 'network'
-    };
-  }
-  
-  return {
-    message: error.message || 'कुछ गलत हुआ है। फिर से try करें।',
-    type: 'unknown'
-  };
 };
 
 export const validateRegistrationData = (email: string, password: string, phone: string): AuthError | null => {
@@ -85,77 +94,35 @@ export const validateRegistrationData = (email: string, password: string, phone:
   return null;
 };
 
+// Legacy functions that now use Firebase
 export const registerUser = async (email: string, password: string, phone: string, referralCode?: string) => {
-  console.log('Starting registration process with Supabase...');
+  console.log('Legacy registerUser called - redirecting to Firebase...');
   
   const validationError = validateRegistrationData(email, password, phone);
   if (validationError) {
     throw new Error(validationError.message);
   }
 
-  const cleanEmail = email.trim().toLowerCase();
-  const cleanPhone = phone.trim().replace(/\D/g, '');
-  
   try {
-    console.log('Attempting Supabase registration for:', cleanEmail);
-    
-    // Clear any existing auth state first
-    await supabase.auth.signOut();
-    
-    const { data, error } = await supabase.auth.signUp({
-      email: cleanEmail,
-      password: password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/`,
-        data: {
-          phone: cleanPhone,
-          referralCode: referralCode?.trim() || ''
-        }
-      }
-    });
-
-    if (error) {
-      console.error('Supabase registration error:', error);
-      throw error;
-    }
-
-    if (data.user) {
-      console.log('Supabase registration successful:', data.user.email);
-      return data;
-    } else {
-      throw new Error('Registration failed - no user returned');
-    }
-    
+    const userCredential = await createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+    console.log('✅ Firebase registration successful:', userCredential.user.email);
+    return userCredential;
   } catch (error: any) {
-    console.error('Registration failed:', error);
+    console.error('❌ Firebase registration failed:', error);
     const authError = getErrorMessage(error);
     throw new Error(authError.message);
   }
 };
 
 export const loginUser = async (email: string, password: string) => {
-  console.log('Starting login process for:', email);
-  
-  const cleanEmail = email.trim().toLowerCase();
+  console.log('Legacy loginUser called - redirecting to Firebase...');
   
   try {
-    // Clear any existing auth state first
-    await supabase.auth.signOut();
-    
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: cleanEmail,
-      password: password
-    });
-
-    if (error) {
-      console.error('Supabase login error:', error);
-      throw error;
-    }
-
-    console.log('Supabase login successful:', data.user?.email);
-    return data;
+    const userCredential = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+    console.log('✅ Firebase login successful:', userCredential.user.email);
+    return userCredential;
   } catch (error: any) {
-    console.error('Login failed:', error);
+    console.error('❌ Firebase login failed:', error);
     const authError = getErrorMessage(error);
     throw new Error(authError.message);
   }

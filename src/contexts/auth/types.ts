@@ -1,27 +1,8 @@
 
-import { User } from '@supabase/supabase-js';
+import { User } from 'firebase/auth';
 
-// Extended user type that can handle both Supabase users and fallback users
-export interface FallbackUser {
-  id: string;
-  email: string;
-  phone?: string;
-  referralCode?: string;
-  createdAt: string;
-  verified: boolean;
-  // Add minimal Supabase User properties to make it compatible
-  app_metadata: Record<string, any>;
-  user_metadata: Record<string, any>;
-  aud: string;
-  created_at: string;
-  email_confirmed_at?: string;
-  phone_confirmed_at?: string;
-  last_sign_in_at?: string;
-  role?: string;
-  updated_at?: string;
-}
-
-export type ExtendedUser = User | FallbackUser;
+// Firebase User is our main user type now
+export type ExtendedUser = User;
 
 export interface AuthContextType {
   currentUser: ExtendedUser | null;
