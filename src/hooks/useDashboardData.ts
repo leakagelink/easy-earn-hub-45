@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/components/ui/use-toast";
-import { supabase } from '@/integrations/supabase/client';
+import { getUserInvestments, getUserTransactions } from '@/services/firestoreService';
 
 interface Investment {
   id: string;
@@ -40,11 +40,13 @@ export const useDashboardData = () => {
       let formattedInvestments: Investment[] = [];
       let formattedTransactions: Transaction[] = [];
       
+      if (!currentUser?.uid) {
+        console.log('No current user found');
+        return;
+      }
+      
       // Fetch user investments
-      const { data: investmentsData, error: investmentsError } = await supabase
-        .from('user_investments')
-        .select('*')
-        .eq('user_id', currentUser?.id);
+      const { data: investmentsData, error: investmentsError } = await getUserInvestments(currentUser.uid);
 
       if (investmentsError) {
         console.error('Error fetching investments:', investmentsError);
@@ -63,12 +65,7 @@ export const useDashboardData = () => {
       }
 
       // Fetch user transactions
-      const { data: transactionsData, error: transactionsError } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', currentUser?.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
+      const { data: transactionsData, error: transactionsError } = await getUserTransactions(currentUser.uid);
 
       if (transactionsError) {
         console.error('Error fetching transactions:', transactionsError);
@@ -104,10 +101,10 @@ export const useDashboardData = () => {
   };
 
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser?.uid) {
       fetchUserData();
     }
-  }, [currentUser]);
+  }, [currentUser?.uid]);
 
   const dailyProfit = investments.reduce((sum, inv) => {
     return sum + (inv.dailyProfit || 0);

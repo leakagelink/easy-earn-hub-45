@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/auth";
-import { supabase } from '@/integrations/supabase/client';
+import { createPaymentRequest } from '@/services/firestoreService';
 import { Wallet } from "lucide-react";
 import QuickAmountButtons from './QuickAmountButtons';
 
@@ -60,23 +60,19 @@ const RechargeForm = () => {
     
     try {
       console.log('Submitting recharge request with data:', {
-        user_id: currentUser.id,
+        user_id: currentUser.uid,
         amount: Number(amount),
         transaction_id: transactionId || 'UPI Payment',
         payment_method: paymentMethod
       });
 
-      const { data, error } = await supabase
-        .from('payment_requests')
-        .insert({
-          user_id: currentUser.id,
-          plan_id: null, // For recharge, plan_id is null
-          amount: Number(amount),
-          transaction_id: transactionId || 'UPI Payment',
-          payment_method: paymentMethod,
-          status: 'pending'
-        })
-        .select();
+      const { data, error } = await createPaymentRequest({
+        user_id: currentUser.uid,
+        plan_id: null, // For recharge, plan_id is null
+        amount: Number(amount),
+        transaction_id: transactionId || 'UPI Payment',
+        payment_method: paymentMethod
+      });
 
       if (error) {
         console.error('Recharge request submission error:', error);

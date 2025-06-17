@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
-import { supabase } from '@/integrations/supabase/client';
+import { approvePaymentRequest, rejectPaymentRequest } from '@/services/firestoreService';
 import { CheckCircle, XCircle } from 'lucide-react';
 
 interface PaymentRequest {
@@ -41,14 +41,12 @@ const PaymentRequestsTable: React.FC<PaymentRequestsTableProps> = ({
 
   const handleApprove = async (requestId: string) => {
     try {
-      const { data, error } = await supabase.rpc('approve_payment_request', {
-        request_id: requestId
-      });
+      const { data, error } = await approvePaymentRequest(requestId);
 
       if (error) {
         toast({
           title: "Approval Failed",
-          description: error.message,
+          description: error.message || "Could not approve payment request",
           variant: "destructive",
         });
         return;
@@ -57,7 +55,7 @@ const PaymentRequestsTable: React.FC<PaymentRequestsTableProps> = ({
       if (data) {
         toast({
           title: "Payment Approved",
-          description: "Payment request has been approved and investment created.",
+          description: "Payment request has been approved successfully.",
         });
         onRefresh();
       } else {
@@ -78,14 +76,12 @@ const PaymentRequestsTable: React.FC<PaymentRequestsTableProps> = ({
 
   const handleReject = async (requestId: string) => {
     try {
-      const { data, error } = await supabase.rpc('reject_payment_request', {
-        request_id: requestId
-      });
+      const { data, error } = await rejectPaymentRequest(requestId);
 
       if (error) {
         toast({
           title: "Rejection Failed",
-          description: error.message,
+          description: error.message || "Could not reject payment request",
           variant: "destructive",
         });
         return;
@@ -143,8 +139,8 @@ const PaymentRequestsTable: React.FC<PaymentRequestsTableProps> = ({
             <TableBody>
               {paymentRequests.length > 0 ? paymentRequests.map((request) => (
                 <TableRow key={request.id}>
-                  <TableCell>{request.user_email}</TableCell>
-                  <TableCell>{request.plan_name}</TableCell>
+                  <TableCell>{request.user_email || 'N/A'}</TableCell>
+                  <TableCell>{request.plan_name || `Plan ${request.plan_id}`}</TableCell>
                   <TableCell className="font-medium">₹{request.amount}</TableCell>
                   <TableCell className="font-mono text-sm">{request.transaction_id}</TableCell>
                   <TableCell className="capitalize">{request.payment_method}</TableCell>
