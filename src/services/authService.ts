@@ -85,8 +85,10 @@ export const validateRegistrationData = (email: string, password: string, phone:
   return null;
 };
 
-// Fallback registration using localStorage
+// Fallback registration using localStorage (only as last resort)
 export const fallbackRegister = (email: string, password: string, phone: string, referralCode?: string) => {
+  console.log('Using fallback registration as last resort...');
+  
   const userData = {
     id: Date.now().toString(),
     email: email.trim().toLowerCase(),
@@ -109,11 +111,11 @@ export const fallbackRegister = (email: string, password: string, phone: string,
   localStorage.setItem('currentUser', JSON.stringify(userData));
   localStorage.setItem('isLoggedIn', 'true');
   
-  return { user: userData, session: { user: userData } };
+  return { user: userData, session: null };
 };
 
 export const registerUser = async (email: string, password: string, phone: string, referralCode?: string) => {
-  console.log('Starting registration process...');
+  console.log('Starting registration process with Supabase...');
   
   const validationError = validateRegistrationData(email, password, phone);
   if (validationError) {
@@ -124,7 +126,10 @@ export const registerUser = async (email: string, password: string, phone: strin
   const cleanPhone = phone.trim().replace(/\D/g, '');
   
   try {
-    console.log('Attempting Supabase registration...');
+    console.log('Attempting Supabase registration for:', cleanEmail);
+    
+    // Clear any existing auth state first
+    await supabase.auth.signOut();
     
     const { data, error } = await supabase.auth.signUp({
       email: cleanEmail,
@@ -141,29 +146,45 @@ export const registerUser = async (email: string, password: string, phone: strin
     if (error) {
       console.error('Supabase registration error:', error);
       
-      // If network error, use fallback
-      if (error.message?.includes('fetch') || error.message?.includes('network')) {
-        console.log('Using fallback registration due to network error...');
+      // Check if it's a network/connection issue
+      if (error.message?.includes('fetch') || 
+          error.message?.includes('network') || 
+          error.message?.includes('Failed to fetch') ||
+          error.message?.includes('NetworkError')) {
+        console.log('Network error detected, using fallback...');
         return fallbackRegister(cleanEmail, password, cleanPhone, referralCode);
       }
       
+      // For other errors, throw them directly
       throw error;
     }
 
-    console.log('Supabase registration successful:', data);
-    return data;
-  } catch (error: any) {
-    console.error('Registration failed, trying fallback:', error);
-    
-    // Always try fallback if Supabase fails
-    try {
-      console.log('Using fallback registration...');
-      return fallbackRegister(cleanEmail, password, cleanPhone, referralCode);
-    } catch (fallbackError: any) {
-      console.error('Fallback registration also failed:', fallbackError);
-      const authError = getErrorMessage(error);
-      throw new Error(authError.message);
+    if (data.user) {
+      console.log('Supabase registration successful:', data.user.email);
+      
+      // Wait a moment for the user to be properly created
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      return data;
+    } else {
+      throw new Error('Registration failed - no user returned');
     }
+    
+  } catch (error: any) {
+    console.error('Registration failed:', error);
+    
+    // Only use fallback for network issues, not validation or auth errors
+    if (error.message?.includes('fetch') || 
+        error.message?.includes('network') || 
+        error.message?.includes('NetworkError') ||
+        error.message?.includes('Failed to fetch')) {
+      console.log('Network issue detected, using fallback registration...');
+      return fallbackRegister(cleanEmail, password, cleanPhone, referralCode);
+    }
+    
+    // For validation/auth errors, throw the processed error
+    const authError = getErrorMessage(error);
+    throw new Error(authError.message);
   }
 };
 
@@ -179,20 +200,21 @@ export const loginUser = async (email: string, password: string) => {
     if (error) {
       console.error('Supabase login error:', error);
       
-      // Try fallback login
+      // Try fallback login only if Supabase fails
       const fallbackUsers = JSON.parse(localStorage.getItem('fallbackUsers') || '[]');
       const user = fallbackUsers.find((u: any) => u.email === email.trim().toLowerCase());
       
       if (user) {
+        console.log('Using fallback login for:', user.email);
         localStorage.setItem('currentUser', JSON.stringify(user));
         localStorage.setItem('isLoggedIn', 'true');
-        return { user, session: { user } };
+        return { user, session: null };
       }
       
       throw error;
     }
 
-    console.log('Login successful:', data);
+    console.log('Supabase login successful:', data.user?.email);
     return data;
   } catch (error: any) {
     console.error('Login failed:', error);

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
@@ -95,13 +94,18 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         }, 1000);
         
       } else {
-        console.log('Attempting registration...');
+        console.log('Attempting registration with Supabase...');
         
-        await register(email.trim(), password, phone.trim(), referralCode.trim());
+        const result = await register(email.trim(), password, phone.trim(), referralCode.trim());
+        
+        // Check if registration was successful with Supabase or fallback
+        const isSupabaseUser = result.session && 'access_token' in result.session;
         
         toast({
           title: "Registration successful! ✅",
-          description: "Account बन गया है। अब आप login कर सकते हैं।",
+          description: isSupabaseUser 
+            ? "Account Supabase में बन गया है! Email verify करें।" 
+            : "Account बन गया है। अब आप login कर सकते हैं।",
         });
         
         if (selectedPlan) {
@@ -116,7 +120,12 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         setReferralCode('');
         
         setTimeout(() => {
-          navigate('/login');
+          if (isSupabaseUser) {
+            // For Supabase users, redirect to login to complete email verification
+            navigate('/login');
+          } else {
+            navigate('/login');
+          }
         }, 2000);
       }
       
@@ -186,7 +195,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       <div className="mt-4 text-center">
         <p className="text-xs text-green-600 font-medium">
-          ✅ Backup registration system active - आपका registration जरूर होगा!
+          ✅ Supabase registration active - आपका data secure रहेगा!
         </p>
       </div>
     </div>

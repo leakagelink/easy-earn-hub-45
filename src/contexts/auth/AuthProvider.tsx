@@ -57,11 +57,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       cleanupAuthState();
       clearAllCookies();
       
+      console.log('Starting registration for:', email);
       const data = await registerUser(email, password, phone, referralCode);
       
-      // Handle both Supabase and fallback responses
       if (data.user) {
         console.log('Registration successful, user created:', data.user.email);
+        
+        // If it's a Supabase user (has session), set the session
+        if (data.session && 'access_token' in data.session) {
+          setSession(data.session);
+          setCurrentUser(data.user);
+        }
+        // If it's fallback user, don't set session but show success
       }
       
       return data;
@@ -105,26 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     let mounted = true;
     
-    // Check for fallback user first
-    const checkFallbackAuth = () => {
-      const currentUser = localStorage.getItem('currentUser');
-      const isLoggedIn = localStorage.getItem('isLoggedIn');
-      
-      if (currentUser && isLoggedIn === 'true') {
-        try {
-          const userData = JSON.parse(currentUser);
-          console.log('Found fallback user:', userData.email);
-          setCurrentUser(userData);
-          // Don't set session for fallback users - keep it null
-          setSession(null);
-          setIsAdmin(userData.email === 'admin@easyearn.us');
-        } catch (error) {
-          console.error('Error parsing fallback user:', error);
-        }
-      }
-    };
-    
-    // Set up auth state listener
+    // Set up auth state listener for Supabase
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (!mounted) return;
@@ -151,9 +139,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsAdmin(false);
           }
         } else {
-          // Only clear if no fallback user exists
+          // Check for fallback user only if no Supabase session
           const fallbackUser = localStorage.getItem('currentUser');
-          if (!fallbackUser) {
+          const isLoggedIn = localStorage.getItem('isLoggedIn');
+          
+          if (fallbackUser && isLoggedIn === 'true') {
+            try {
+              const userData = JSON.parse(fallbackUser);
+              console.log('Found fallback user:', userData.email);
+              setCurrentUser(userData);
+              setSession(null); // No session for fallback users
+              setIsAdmin(userData.email === 'admin@easyearn.us');
+            } catch (error) {
+              console.error('Error parsing fallback user:', error);
+              cleanupAuthState();
+              setCurrentUser(null);
+              setSession(null);
+              setIsAdmin(false);
+            }
+          } else {
             cleanupAuthState();
             setCurrentUser(null);
             setSession(null);
@@ -165,24 +169,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    // Get initial session
+    // Get initial session from Supabase
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted) return;
       
       if (session?.user) {
-        console.log('Initial session check:', session.user.email);
+        console.log('Initial Supabase session found:', session.user.email);
         setSession(session);
         setCurrentUser(session.user);
       } else {
-        // Check fallback auth if no Supabase session
-        checkFallbackAuth();
+        // Check for fallback user
+        const fallbackUser = localStorage.getItem('currentUser');
+        const isLoggedIn = localStorage.getItem('isLoggedIn');
+        
+        if (fallbackUser && isLoggedIn === 'true') {
+          try {
+            const userData = JSON.parse(fallbackUser);
+            console.log('Initial fallback user found:', userData.email);
+            setCurrentUser(userData);
+            setSession(null);
+            setIsAdmin(userData.email === 'admin@easyearn.us');
+          } catch (error) {
+            console.error('Error parsing fallback user:', error);
+          }
+        }
       }
       
       setLoading(false);
     });
-
-    // Initial fallback check
-    checkFallbackAuth();
 
     return () => {
       mounted = false;
