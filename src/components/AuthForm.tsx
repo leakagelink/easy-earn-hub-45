@@ -29,28 +29,6 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const navigate = useNavigate();
   const { login, register } = useAuth();
   
-  const getErrorMessage = (error: any) => {
-    console.log('🔍 Processing error:', error);
-    
-    if (error.message?.includes('Invalid login credentials')) {
-      return 'गलत email या password है। फिर से कोशिश करें।';
-    }
-    if (error.message?.includes('User already registered')) {
-      return 'यह email पहले से registered है। Login करने की कोशिश करें।';
-    }
-    if (error.message?.includes('Password should be at least 6 characters')) {
-      return 'Password कम से कम 6 अक्षर का होना चाहिए।';
-    }
-    if (error.message?.includes('Invalid email')) {
-      return 'सही email address डालें।';
-    }
-    if (error.message?.includes('fetch') || error.message?.includes('Failed to fetch')) {
-      return 'Internet connection की समस्या है। कुछ देर बाद कोशिश करें।';
-    }
-    
-    return error.message || 'कुछ गलत हुआ है। फिर से कोशिश करें।';
-  };
-  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -94,7 +72,10 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         console.log('🔑 Attempting login with:', loginEmail);
         await login(loginEmail, password);
         
-        toast({ title: "✅ Login successful!" });
+        toast({ 
+          title: "✅ Login successful!",
+          description: "आपका login हो गया है"
+        });
         navigate(localStorage.getItem('selectedPlan') ? '/payment' : '/invest');
       } else {
         console.log('📝 Attempting registration...');
@@ -111,11 +92,9 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     } catch (error: any) {
       console.error('💥 Auth error:', error);
       
-      const errorMessage = getErrorMessage(error);
-      
       toast({
         title: mode === 'login' ? "❌ Login Failed" : "❌ Registration Failed",
-        description: errorMessage,
+        description: error.message || 'कुछ गलत हुआ है। फिर से कोशिश करें।',
         variant: "destructive"
       });
     } finally {
@@ -172,7 +151,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       <div className="mt-4 text-center">
         <p className="text-xs text-green-600 font-medium">
-          🔧 Fresh Supabase configuration with detailed logging
+          🔧 Network optimized Supabase client with retry mechanism
         </p>
       </div>
     </div>
