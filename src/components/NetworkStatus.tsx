@@ -3,16 +3,16 @@ import React, { useState, useEffect } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { checkNetworkStatus, NetworkStatus as INetworkStatus } from '@/utils/networkDiagnostics';
+import { checkNetworkHealth } from '@/integrations/supabase/client';
 
 const NetworkStatus: React.FC = () => {
-  const [networkStatus, setNetworkStatus] = useState<INetworkStatus | null>(null);
+  const [networkStatus, setNetworkStatus] = useState<any>(null);
   const [isChecking, setIsChecking] = useState(false);
 
   const checkStatus = async () => {
     setIsChecking(true);
     try {
-      const status = await checkNetworkStatus();
+      const status = await checkNetworkHealth();
       setNetworkStatus(status);
     } catch (error) {
       console.error('Network check failed:', error);
@@ -43,7 +43,7 @@ const NetworkStatus: React.FC = () => {
 
   if (!networkStatus) return null;
 
-  if (!networkStatus.isOnline) {
+  if (!networkStatus.internet) {
     return (
       <Alert variant="destructive" className="mb-4">
         <WifiOff className="h-4 w-4" />
@@ -63,7 +63,7 @@ const NetworkStatus: React.FC = () => {
     );
   }
 
-  if (!networkStatus.canReachAppwrite) {
+  if (!networkStatus.supabase) {
     return (
       <Alert variant="destructive" className="mb-4">
         <Wifi className="h-4 w-4" />
@@ -78,17 +78,6 @@ const NetworkStatus: React.FC = () => {
             <RefreshCw className={`h-4 w-4 mr-1 ${isChecking ? 'animate-spin' : ''}`} />
             Retry
           </Button>
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  if (networkStatus.latency > 3000) {
-    return (
-      <Alert className="mb-4">
-        <Wifi className="h-4 w-4" />
-        <AlertDescription>
-          Internet connection slow है ({networkStatus.latency}ms). धीरे काम करेगा।
         </AlertDescription>
       </Alert>
     );

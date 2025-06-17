@@ -16,21 +16,99 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, 
   global: {
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
+      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+      'Cache-Control': 'no-cache'
+    },
+    fetch: (url, options = {}) => {
+      console.log('🌐 Supabase fetch:', url);
+      return fetch(url, {
+        ...options,
+        signal: AbortSignal.timeout(15000) // 15 second timeout
+      });
     }
-  },
-  realtime: {
-    enabled: false
   }
 })
 
-// Test connectivity function
+// Enhanced connection test with multiple checks
 export const testSupabaseConnection = async () => {
   try {
-    const { data, error } = await supabase.from('profiles').select('count').limit(1)
-    return { success: true, error: null }
-  } catch (error) {
-    console.log('Supabase connection test failed:', error)
-    return { success: false, error }
+    console.log('🔍 Testing Supabase connection...');
+    
+    // Test 1: Basic health check
+    const healthResponse = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+      method: 'HEAD',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+      },
+      signal: AbortSignal.timeout(10000)
+    });
+    
+    if (!healthResponse.ok) {
+      throw new Error(`Health check failed: ${healthResponse.status}`);
+    }
+    
+    // Test 2: Auth endpoint check
+    const authResponse = await fetch(`${SUPABASE_URL}/auth/v1/settings`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+      },
+      signal: AbortSignal.timeout(10000)
+    });
+    
+    if (!authResponse.ok) {
+      throw new Error(`Auth endpoint failed: ${authResponse.status}`);
+    }
+    
+    console.log('✅ Supabase connection successful');
+    return { success: true, error: null };
+    
+  } catch (error: any) {
+    console.error('❌ Supabase connection failed:', error);
+    return { 
+      success: false, 
+      error: error.message || 'Connection failed' 
+    };
   }
 }
+
+// Network diagnostics function
+export const checkNetworkHealth = async () => {
+  const results = {
+    internet: false,
+    supabase: false,
+    dns: false,
+    details: {} as any
+  };
+  
+  try {
+    // Check internet connectivity
+    const googleTest = await fetch('https://www.google.com/favicon.ico', {
+      mode: 'no-cors',
+      signal: AbortSignal.timeout(5000)
+    });
+    results.internet = true;
+    results.details.google = 'Connected';
+  } catch (error) {
+    results.details.google = 'Failed';
+    console.log('Internet check failed');
+  }
+  
+  try {
+    // Check DNS resolution
+    const dnsTest = await fetch('https://1.1.1.1/', {
+      mode: 'no-cors',
+      signal: AbortSignal.timeout(5000)
+    });
+    results.dns = true;
+    results.details.dns = 'Working';
+  } catch (error) {
+    results.details.dns = 'Failed';
+  }
+  
+  // Check Supabase
+  const supabaseTest = await testSupabaseConnection();
+  results.supabase = supabaseTest.success;
+  results.details.supabase = supabaseTest.success ? 'Connected' : supabaseTest.error;
+  
+  return results;
+};

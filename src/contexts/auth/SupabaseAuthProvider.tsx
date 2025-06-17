@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase, testSupabaseConnection } from '@/integrations/supabase/client';
+import { supabase, testSupabaseConnection, checkNetworkHealth } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 
 interface SupabaseAuthContextType {
@@ -12,6 +12,7 @@ interface SupabaseAuthContextType {
   logout: () => Promise<void>;
   loading: boolean;
   isAdmin: boolean;
+  networkStatus: any;
 }
 
 const SupabaseAuthContext = createContext<SupabaseAuthContextType | undefined>(undefined);
@@ -28,15 +29,19 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [networkStatus, setNetworkStatus] = useState<any>(null);
   const { toast } = useToast();
 
   const isAdmin = user?.email === 'admin@easyearn.us';
 
   useEffect(() => {
+    // Initial network health check
+    checkNetworkHealth().then(setNetworkStatus);
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
+        console.log('🔑 Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -57,10 +62,16 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     console.log('🔑 Supabase login attempt for:', email);
     
     try {
-      // Test connection first
-      const connectionTest = await testSupabaseConnection();
-      if (!connectionTest.success) {
-        throw new Error('Network connection issue. Please check your internet connection.');
+      // Network health check
+      const healthCheck = await checkNetworkHealth();
+      setNetworkStatus(healthCheck);
+      
+      if (!healthCheck.internet) {
+        throw new Error('Internet connection नहीं है। WiFi या mobile data check करें।');
+      }
+      
+      if (!healthCheck.supabase) {
+        throw new Error('Server connection की समस्या है। कुछ देर बाद try करें।');
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -86,16 +97,24 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     console.log('📝 Supabase registration attempt for:', email);
     
     try {
-      // Test connection first
-      const connectionTest = await testSupabaseConnection();
-      if (!connectionTest.success) {
-        throw new Error('Network connection issue. कृपया अपना internet connection check करें।');
+      // Network health check first
+      const healthCheck = await checkNetworkHealth();
+      setNetworkStatus(healthCheck);
+      
+      if (!healthCheck.internet) {
+        throw new Error('Internet connection नहीं है। WiFi या mobile data check करें।');
+      }
+      
+      if (!healthCheck.supabase) {
+        throw new Error('Server connection की समस्या है। कुछ देर बाद try करें।');
       }
 
       // Clear any existing session first
       await supabase.auth.signOut();
       
-      const redirectUrl = `${window.location.origin}/`;
+      // Use current domain for redirect
+      const redirectUrl = window.location.origin;
+      console.log('🔗 Using redirect URL:', redirectUrl);
       
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
@@ -118,7 +137,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
       
       toast({
         title: "✅ Registration successful!",
-        description: "Account बन गया है। अब login करें।",
+        description: "Account बन गया है। Email confirm करने के बाद login करें।",
       });
 
       // Force a small delay to ensure the user is created
@@ -160,7 +179,8 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     register,
     logout,
     loading,
-    isAdmin
+    isAdmin,
+    networkStatus
   };
 
   return (
@@ -178,8 +198,12 @@ const getErrorMessage = (error: any): string => {
   console.log('🔍 Error details:', { message, error });
   
   // Network errors
-  if (message.includes('Failed to fetch') || message.includes('Network')) {
+  if (message.includes('Failed to fetch') || message.includes('Network') || message.includes('fetch')) {
     return 'Internet connection की समस्या है। WiFi/Data check करें और फिर try करें।';
+  }
+  
+  if (message.includes('timeout') || message.includes('AbortError')) {
+    return 'Server response slow है। कुछ देर बाद फिर try करें।';
   }
   
   // Supabase specific errors
@@ -205,6 +229,10 @@ const getErrorMessage = (error: any): string => {
 
   if (message.includes('signup is disabled')) {
     return 'Registration बंद है। Admin से contact करें।';
+  }
+  
+  if (message.includes('rate limit') || message.includes('too many')) {
+    return 'बहुत जल्दी try कर रहे हैं। 5 मिनट बाद कोशिश करें।';
   }
   
   return message || 'कुछ गलत हुआ है। फिर से कोशिश करें।';

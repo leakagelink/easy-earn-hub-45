@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
 import { useSupabaseAuth } from '@/contexts/auth/SupabaseAuthProvider';
+import NetworkStatus from '@/components/NetworkStatus';
 import LoginOptions from './auth/LoginOptions';
 import PhoneInput from './auth/PhoneInput';
 import EmailInput from './auth/EmailInput';
@@ -29,7 +30,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { login, register } = useSupabaseAuth();
+  const { login, register, networkStatus } = useSupabaseAuth();
   
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -43,16 +44,6 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Check internet connectivity first
-    if (!navigator.onLine) {
-      toast({
-        title: "❌ No Internet Connection",
-        description: "कृपया internet connection check करें।",
-        variant: "destructive"
-      });
-      return;
-    }
     
     console.log('📋 Form submission:', { mode, email, phone, loginMethod });
     
@@ -110,7 +101,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         // Show success message and redirect to login
         toast({
           title: "✅ Registration Successful!",
-          description: "Account बन गया! अब login करें।",
+          description: "Account बन गया! Email verify करने के बाद login करें।",
         });
         
         // Small delay then redirect to login
@@ -145,10 +136,12 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         </div>
       )}
       
-      {!navigator.onLine && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-md">
-          <p className="text-sm text-red-600 text-center">
-            ⚠️ Internet connection नहीं है। कृपया WiFi/Data check करें।
+      <NetworkStatus />
+      
+      {networkStatus && !networkStatus.supabase && (
+        <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 rounded-md">
+          <p className="text-sm text-yellow-700 text-center">
+            ⚠️ Server connection slow है। Registration में time लग सकता है।
           </p>
         </div>
       )}
@@ -188,10 +181,10 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       <div className="mt-4 text-center">
         <p className="text-xs text-green-600 font-medium">
-          🔄 Updated Supabase Authentication
+          🔄 Enhanced Network & Auth System
         </p>
         <p className="text-xs text-gray-500 mt-1">
-          Better Network Handling & Error Messages
+          Real-time connectivity monitoring with better error handling
         </p>
       </div>
     </div>
