@@ -15,16 +15,44 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+    debug: true,
+    flowType: 'pkce'
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'supabase-js-web'
+    }
+  },
+  db: {
+    schema: 'public'
   }
 })
 
-// Test connection immediately
-supabase.auth.getSession().then(({ data, error }) => {
-  if (error) {
-    console.error('Supabase connection test failed:', error);
-  } else {
-    console.log('Supabase connection test successful');
+// Test connection with retry mechanism
+const testConnection = async (retries = 3) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      console.log(`Connection test attempt ${i + 1}/${retries}`);
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error(`Connection test ${i + 1} failed:`, error);
+        if (i === retries - 1) throw error;
+        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+        continue;
+      }
+      console.log('Supabase connection test successful');
+      return true;
+    } catch (err) {
+      console.error(`Connection attempt ${i + 1} error:`, err);
+      if (i === retries - 1) {
+        console.error('All connection attempts failed');
+        return false;
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+    }
   }
-}).catch(err => {
-  console.error('Supabase connection error:', err);
-});
+  return false;
+};
+
+// Test connection on load
+testConnection();

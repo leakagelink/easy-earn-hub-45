@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,15 +23,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     console.log('AuthProvider: Starting login process for:', email);
     
-    // Test connection first
-    try {
-      const { data: healthCheck } = await supabase.auth.getSession();
-      console.log('Connection health check passed');
-    } catch (connectionError) {
-      console.error('Connection health check failed:', connectionError);
-      throw new Error('Unable to connect to authentication service. Please check your internet connection and try again.');
-    }
-    
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
@@ -53,15 +45,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = async (email: string, password: string, phone: string, referralCode?: string) => {
     console.log('AuthProvider: Starting registration process for:', email);
     
-    // Test connection first
-    try {
-      const { data: healthCheck } = await supabase.auth.getSession();
-      console.log('Connection health check passed for registration');
-    } catch (connectionError) {
-      console.error('Connection health check failed for registration:', connectionError);
-      throw new Error('Unable to connect to authentication service. Please check your internet connection and try again.');
-    }
-    
     try {
       // Basic validation
       if (!email || !password || !phone) {
@@ -77,14 +60,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Please enter a valid email address');
       }
 
-      const redirectUrl = `${window.location.origin}/`;
-      console.log('Registration redirect URL:', redirectUrl);
+      // Use the current domain for redirect
+      const currentDomain = window.location.origin;
+      console.log('Registration redirect URL:', currentDomain);
       
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password: password,
         options: {
-          emailRedirectTo: redirectUrl,
+          emailRedirectTo: currentDomain,
           data: {
             phone: phone.trim(),
             referralCode: referralCode?.trim() || ''
@@ -94,6 +78,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Registration error details:', error);
+        
+        // Handle specific Supabase errors
+        if (error.message?.includes('User already registered')) {
+          throw new Error('This email is already registered. Please try logging in instead.');
+        }
+        if (error.message?.includes('Invalid email')) {
+          throw new Error('Please enter a valid email address.');
+        }
+        if (error.message?.includes('Password should be at least')) {
+          throw new Error('Password must be at least 6 characters long.');
+        }
+        if (error.message?.includes('Failed to fetch') || error.name === 'AuthRetryableFetchError') {
+          throw new Error('Network connection error. Please check your internet connection and try again.');
+        }
+        
         throw error;
       }
 

@@ -32,6 +32,16 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const { login, register } = useAuth();
   
   const getErrorMessage = (error: any) => {
+    console.log('Processing error:', error);
+    
+    // Network/Connection errors
+    if (error.message?.includes('Failed to fetch') || 
+        error.name === 'AuthRetryableFetchError' ||
+        error.message?.includes('Network connection error')) {
+      return 'Network connection failed. Please check your internet connection and try again.';
+    }
+    
+    // Auth-specific errors
     if (error.message?.includes('Invalid login credentials')) {
       return 'Invalid email or password. Please check your credentials and try again.';
     }
@@ -44,6 +54,11 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     if (error.message?.includes('Invalid email')) {
       return 'Please enter a valid email address.';
     }
+    if (error.message?.includes('Email not confirmed')) {
+      return 'Please check your email and confirm your account before logging in.';
+    }
+    
+    // Return the original error message or a generic fallback
     return error.message || 'Something went wrong. Please try again.';
   };
   
