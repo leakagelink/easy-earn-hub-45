@@ -37,8 +37,8 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   };
   
   const validatePhone = (phone: string) => {
-    const phoneRegex = /^[0-9]{10}$/;
-    return phoneRegex.test(phone.replace(/\D/g, ''));
+    const cleanPhone = phone.replace(/\D/g, '');
+    return cleanPhone.length >= 10;
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,36 +46,66 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     
     console.log('📋 Form submission:', { mode, email, phone, loginMethod });
     
-    if (!password || password.length < 6) {
-      toast({ title: "Password कम से कम 6 characters का होना चाहिए", variant: "destructive" });
-      return;
-    }
-    
+    // Comprehensive validation
     if (mode === 'login') {
       if (loginMethod === 'email') {
         if (!email || !validateEmail(email)) {
-          toast({ title: "सही email address डालें", variant: "destructive" });
+          toast({ 
+            title: "सही email address डालें", 
+            variant: "destructive" 
+          });
           return;
         }
       } else {
         if (!phone || !validatePhone(phone)) {
-          toast({ title: "सही phone number डालें (10 digits)", variant: "destructive" });
+          toast({ 
+            title: "सही phone number डालें (10+ digits)", 
+            variant: "destructive" 
+          });
           return;
         }
       }
     } else {
+      // Registration validation
       if (!email || !validateEmail(email)) {
-        toast({ title: "सही email address डालें", variant: "destructive" });
+        toast({ 
+          title: "सही email address डालें", 
+          variant: "destructive" 
+        });
         return;
       }
+      
       if (!phone || !validatePhone(phone)) {
-        toast({ title: "सही phone number डालें (10 digits)", variant: "destructive" });
+        toast({ 
+          title: "सही phone number डालें (10+ digits)", 
+          variant: "destructive" 
+        });
         return;
       }
+      
+      if (!password || password.length < 6) {
+        toast({ 
+          title: "Password कम से कम 6 characters का होना चाहिए", 
+          variant: "destructive" 
+        });
+        return;
+      }
+      
       if (password !== confirmPassword) {
-        toast({ title: "Passwords match नहीं हो रहे", variant: "destructive" });
+        toast({ 
+          title: "Passwords match नहीं हो रहे", 
+          variant: "destructive" 
+        });
         return;
       }
+    }
+    
+    if (!password || password.length < 6) {
+      toast({ 
+        title: "Password कम से कम 6 characters का होना चाहिए", 
+        variant: "destructive" 
+      });
+      return;
     }
     
     setIsLoading(true);
@@ -84,18 +114,29 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       if (mode === 'login') {
         const loginEmail = loginMethod === 'email' ? email : `${phone}@easyearn.com`;
         console.log('🔑 Attempting login with:', loginEmail);
+        
         await login(loginEmail, password);
         
-        navigate('/invest');
+        // Wait for auth state to update
+        setTimeout(() => {
+          navigate('/invest');
+        }, 1000);
+        
       } else {
         console.log('📝 Attempting registration...');
         
         await register(email, password, phone, referralCode);
         
-        // Wait a moment then navigate
+        // After successful registration, show success and redirect to login
+        toast({
+          title: "✅ Registration successful!",
+          description: "Account बन गया है। अब login करें।",
+        });
+        
+        // Wait and redirect to login
         setTimeout(() => {
-          navigate('/invest');
-        }, 1500);
+          navigate('/login');
+        }, 2000);
       }
     } catch (error: any) {
       console.error('💥 Auth error:', error);
@@ -159,10 +200,10 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       <div className="mt-4 text-center">
         <p className="text-xs text-green-600 font-medium">
-          ✅ Optimized Supabase Authentication
+          ✅ Fixed Supabase Authentication
         </p>
         <p className="text-xs text-gray-500 mt-1">
-          Simplified network configuration for better reliability
+          Registration और Login अब properly काम करेगा
         </p>
       </div>
     </div>
