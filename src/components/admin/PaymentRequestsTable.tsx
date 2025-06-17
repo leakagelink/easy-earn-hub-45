@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
-import { approvePaymentRequest, rejectPaymentRequest } from '@/services/firestoreService';
+import { approvePaymentRequest, rejectPaymentRequest } from '@/services/appwriteService';
 import { CheckCircle, XCircle } from 'lucide-react';
 
 interface PaymentRequest {
