@@ -12,7 +12,7 @@ export function useAuth() {
     // Fallback to Firebase auth if main auth context is not available
     const firebaseAuth = useFirebaseAuth();
     return {
-      currentUser: firebaseAuth.currentUser,
+      currentUser: convertFirebaseUser(firebaseAuth.currentUser),
       login: firebaseAuth.login,
       logout: firebaseAuth.logout,
       register: firebaseAuth.register,
@@ -42,7 +42,9 @@ const convertFirebaseUser = (user: User | null): AuthContextType['currentUser'] 
     passwordUpdate: '',
     registration: user.metadata.creationTime || '',
     accessedAt: user.metadata.lastSignInTime || '',
-    labels: []
+    labels: [],
+    mfa: [],
+    targets: []
   };
 };
 
