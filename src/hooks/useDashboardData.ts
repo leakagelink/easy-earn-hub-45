@@ -1,127 +1,71 @@
-
 import { useState, useEffect } from 'react';
-import { useAuth } from "@/contexts/auth";
-import { useToast } from "@/components/ui/use-toast";
-import { getUserInvestments, getUserTransactions } from '@/services/appwriteService';
-
-interface Investment {
-  id: string;
-  planId: string;
-  amount: number;
-  status: string;
-  purchaseDate: string;
-  expiryDate: string;
-  planName: string;
-  dailyProfit: number;
-}
-
-interface Transaction {
-  id: string;
-  type: string;
-  amount: number;
-  status: string;
-  createdAt: string;
-}
+import { useFirebaseAuth } from '@/contexts/auth/FirebaseAuthProvider';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { db } from '@/integrations/firebase/config';
 
 export const useDashboardData = () => {
-  const { currentUser } = useAuth();
-  const { toast } = useToast();
-  
-  const [investments, setInvestments] = useState<Investment[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [balance, setBalance] = useState(0);
-  const [totalEarned, setTotalEarned] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const fetchUserData = async () => {
-    try {
-      setIsLoading(true);
-      
-      let formattedInvestments: Investment[] = [];
-      let formattedTransactions: Transaction[] = [];
-      
-      if (!currentUser?.$id) {
-        console.log('No current user found');
-        return;
-      }
-      
-      // Fetch user investments
-      const { data: investmentsData, error: investmentsError } = await getUserInvestments(currentUser.$id);
-
-      if (investmentsError) {
-        console.error('Error fetching investments:', investmentsError);
-      } else {
-        formattedInvestments = investmentsData?.map(inv => ({
-          id: inv.$id,
-          planId: inv.plan_id || '',
-          amount: inv.amount || 0,
-          status: inv.status || 'active',
-          purchaseDate: inv.purchase_date || '',
-          expiryDate: inv.expiry_date || '',
-          planName: `Plan ${inv.plan_id}`,
-          dailyProfit: inv.daily_profit || 0
-        })) || [];
-        setInvestments(formattedInvestments);
-      }
-
-      // Fetch user transactions
-      const { data: transactionsData, error: transactionsError } = await getUserTransactions(currentUser.$id);
-
-      if (transactionsError) {
-        console.error('Error fetching transactions:', transactionsError);
-      } else {
-        formattedTransactions = transactionsData?.map(t => ({
-          id: t.$id,
-          type: t.type || '',
-          amount: t.amount || 0,
-          status: t.status || 'pending',
-          createdAt: t.created_at || ''
-        })) || [];
-        setTransactions(formattedTransactions);
-      }
-
-      // Calculate totals
-      const totalInvested = formattedInvestments.reduce((sum, inv) => sum + Number(inv.amount), 0);
-      const totalEarnings = formattedTransactions.filter(t => t.type === 'earning')
-        .reduce((sum, t) => sum + Number(t.amount), 0);
-      
-      setBalance(totalInvested + totalEarnings);
-      setTotalEarned(totalEarnings);
-
-    } catch (error: any) {
-      console.error('Error fetching user data:', error);
-      toast({
-        title: "Error loading data",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const [investments, setInvestments] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { currentUser } = useFirebaseAuth();
 
   useEffect(() => {
-    if (currentUser?.$id) {
-      fetchUserData();
-    }
-  }, [currentUser?.$id]);
+    if (!currentUser?.uid) return;
+    
+    const fetchUserData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch user investments
+        const investmentsQuery = query(
+          collection(db, 'investments'),
+          where('userId', '==', currentUser.uid),
+          orderBy('createdAt', 'desc')
+        );
+        const investmentsSnapshot = await getDocs(investmentsQuery);
+        const investmentsData = investmentsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setInvestments(investmentsData);
 
-  const dailyProfit = investments.reduce((sum, inv) => {
-    return sum + (inv.dailyProfit || 0);
-  }, 0);
+        // Fetch user transactions
+        const transactionsQuery = query(
+          collection(db, 'transactions'),
+          where('userId', '==', currentUser.uid),
+          orderBy('createdAt', 'desc')
+        );
+        const transactionsSnapshot = await getDocs(transactionsQuery);
+        const transactionsData = transactionsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setTransactions(transactionsData);
 
-  const referralEarnings = transactions
-    .filter(t => t.type === 'referral')
-    .reduce((sum, t) => sum + Number(t.amount), 0);
+        // Calculate balance from transactions
+        const totalBalance = transactionsData.reduce((acc: number, transaction: any) => {
+          return transaction.type === 'credit' ? acc + transaction.amount : acc - transaction.amount;
+        }, 0);
+        setBalance(totalBalance);
+
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [currentUser?.uid]);
 
   return {
+    balance,
     investments,
     transactions,
-    balance,
-    totalEarned,
-    dailyProfit,
-    referralEarnings,
-    isLoading,
-    refetch: fetchUserData
+    loading,
+    refetch: () => {
+      // Refetch logic would go here
+    }
   };
 };

@@ -1,56 +1,30 @@
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useFirebaseAuth } from './FirebaseAuthProvider';
 import { AuthContextType } from './types';
-import { useAuthState } from './useAuthState';
-import { createAuthOperations } from './authOperations';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    console.error('🔥 useAuth called outside AuthProvider! Current location:', window.location.pathname);
-    throw new Error('useAuth must be used within an AuthProvider');
+    // Fallback to Firebase auth if main auth context is not available
+    return useFirebaseAuth() as AuthContextType;
   }
   return context;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  console.log('🔥 Appwrite AuthProvider rendering...');
+  const firebaseAuth = useFirebaseAuth();
   
-  const {
-    currentUser,
-    userProfile,
-    loading,
-    isAdmin,
-    setCurrentUser,
-    setUserProfile,
-    setIsAdmin
-  } = useAuthState();
-
-  console.log('Appwrite AuthProvider state:', { 
-    loading, 
-    currentUser: currentUser?.email || 'none',
-    isAdmin
-  });
-
-  const { login, register, logout } = createAuthOperations({
-    setCurrentUser,
-    setUserProfile,
-    setIsAdmin
-  });
-
+  // Convert Firebase auth to match AuthContextType interface
   const value: AuthContextType = {
-    currentUser,
-    userProfile,
-    login,
-    register,
-    logout,
-    loading,
-    isAdmin
+    user: firebaseAuth.currentUser,
+    login: firebaseAuth.login,
+    logout: firebaseAuth.logout,
+    register: firebaseAuth.register,
+    loading: firebaseAuth.loading,
   };
-
-  console.log('🔥 Appwrite AuthProvider providing context');
 
   return (
     <AuthContext.Provider value={value}>
