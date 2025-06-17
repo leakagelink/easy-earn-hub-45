@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthContextType } from './types';
+import { cleanupAuthState, clearAllCookies } from '@/utils/authCleanup';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -21,7 +22,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const login = async (email: string, password: string) => {
-    console.log('AuthProvider: Starting login for:', email);
+    console.log('Starting login process...');
+    
+    // Clean up before login
+    cleanupAuthState();
     
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -34,16 +38,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
 
-      console.log('AuthProvider: Login successful');
+      console.log('Login successful');
       return data;
     } catch (error) {
-      console.error('AuthProvider: Login failed:', error);
+      console.error('Login failed:', error);
       throw error;
     }
   };
 
   const register = async (email: string, password: string, phone: string, referralCode?: string) => {
-    console.log('AuthProvider: Starting registration for:', email);
+    console.log('Starting registration process...');
+    
+    // Clean up before registration
+    cleanupAuthState();
+    clearAllCookies();
     
     try {
       // Basic validation
@@ -60,13 +68,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('सही email address डालें');
       }
 
-      // Clean inputs
       const cleanEmail = email.trim().toLowerCase();
       const cleanPhone = phone.trim();
       
-      console.log('Attempting registration...', { email: cleanEmail, phone: cleanPhone });
+      console.log('Attempting registration with cleaned data...');
       
-      // Simplified registration - remove redirect URL and complex options
       const { data, error } = await supabase.auth.signUp({
         email: cleanEmail,
         password: password,
@@ -81,7 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         console.error('Registration error:', error);
         
-        // Specific error handling
+        // Handle specific errors
         if (error.message?.includes('User already registered')) {
           throw new Error('यह email पहले से registered है। Login करने की कोशिश करें।');
         }
@@ -92,47 +98,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(error.message || 'Registration में error आई है');
       }
 
-      console.log('AuthProvider: Registration successful', data);
+      console.log('Registration successful');
       return data;
     } catch (error: any) {
-      console.error('AuthProvider: Registration failed:', error);
+      console.error('Registration failed:', error);
       throw error;
     }
   };
 
   const logout = async () => {
-    console.log('AuthProvider: Starting logout process');
+    console.log('Starting logout process...');
     try {
+      // Clean up first
+      cleanupAuthState();
+      clearAllCookies();
+      
       const { error } = await supabase.auth.signOut();
       if (error) {
-        throw error;
+        console.error('Logout error:', error);
       }
       
-      // Clear local state
+      // Clear state
       setCurrentUser(null);
       setSession(null);
       setIsAdmin(false);
       
-      // Clear localStorage
-      localStorage.removeItem('isLoggedIn');
-      localStorage.removeItem('userEmail');
-      localStorage.removeItem('userName');
-      localStorage.removeItem('isAdmin');
-      
-      console.log('AuthProvider: Logout successful');
+      console.log('Logout completed');
     } catch (error) {
-      console.error('AuthProvider: Logout failed:', error);
-      throw error;
+      console.error('Logout failed:', error);
+      // Force clear state even if logout fails
+      setCurrentUser(null);
+      setSession(null);
+      setIsAdmin(false);
+      cleanupAuthState();
     }
   };
 
   useEffect(() => {
-    console.log('AuthProvider: Setting up auth listener');
+    console.log('Setting up auth state listener...');
     
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('AuthProvider: Auth state changed:', event, session?.user?.email || 'No user');
+        console.log('Auth state changed:', event, session?.user?.email || 'No user');
         
         setSession(session);
         setCurrentUser(session?.user ?? null);
@@ -141,8 +149,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const userEmail = session.user.email || '';
           const userName = session.user.user_metadata?.name || userEmail.split('@')[0];
           const isAdminUser = userEmail === 'admin@easyearn.us';
-          
-          console.log('AuthProvider: User data:', { userEmail, userName, isAdminUser });
           
           localStorage.setItem('isLoggedIn', 'true');
           localStorage.setItem('userEmail', userEmail);
@@ -156,11 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsAdmin(false);
           }
         } else {
-          console.log('AuthProvider: No user, clearing storage');
-          localStorage.removeItem('isLoggedIn');
-          localStorage.removeItem('userEmail');
-          localStorage.removeItem('userName');
-          localStorage.removeItem('isAdmin');
+          cleanupAuthState();
           setIsAdmin(false);
         }
         
@@ -170,14 +172,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('AuthProvider: Initial session:', session?.user?.email || 'No session');
+      console.log('Initial session check:', session?.user?.email || 'No session');
       setSession(session);
       setCurrentUser(session?.user ?? null);
       setLoading(false);
     });
 
     return () => {
-      console.log('AuthProvider: Cleaning up auth listener');
       subscription.unsubscribe();
     };
   }, []);

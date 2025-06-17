@@ -10,7 +10,7 @@ import PasswordInput from './auth/PasswordInput';
 import ReferralInput from './auth/ReferralInput';
 import SubmitButton from './auth/SubmitButton';
 import AuthFooter from './auth/AuthFooter';
-import { useAuthFormValidator } from './auth/AuthFormValidator';
+import { cleanupAuthState } from '@/utils/authCleanup';
 
 interface AuthFormProps {
   mode: 'login' | 'register';
@@ -28,26 +28,25 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { validateForm } = useAuthFormValidator();
   const { login, register } = useAuth();
   
   const getErrorMessage = (error: any) => {
-    console.log('Processing error in AuthForm:', error);
+    console.log('Processing error:', error);
     
-    // Network/Connection errors - Hindi messages
+    // Network/Connection errors
     if (error.message?.includes('Failed to fetch') || 
         error.name === 'AuthRetryableFetchError' ||
         error.message?.includes('fetch') ||
         error.message?.includes('NetworkError')) {
-      return 'Server से connection नहीं हो पा रहा। Internet connection check करें।';
+      return 'Internet connection check करें और फिर try करें।';
     }
     
-    // Auth-specific errors in Hindi
+    // Auth-specific errors
     if (error.message?.includes('Invalid login credentials')) {
-      return 'Email या password गलत है। फिर से try करें।';
+      return 'Email या password गलत है।';
     }
     if (error.message?.includes('User already registered')) {
-      return 'यह email पहले से registered है। Login करने की कोशिश करें।';
+      return 'यह email पहले से registered है। Login करें।';
     }
     if (error.message?.includes('Password should be at least 6 characters')) {
       return 'Password कम से कम 6 characters का होना चाहिए।';
@@ -55,73 +54,91 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     if (error.message?.includes('Invalid email')) {
       return 'सही email address डालें।';
     }
-    if (error.message?.includes('Email not confirmed')) {
-      return 'Email confirm करने के लिए अपना email check करें।';
+    
+    return error.message || 'कुछ गलत हुआ है। फिर से try करें।';
+  };
+  
+  const validateForm = () => {
+    if (mode === 'login') {
+      if (loginMethod === 'email' && !email.trim()) {
+        toast({ title: "Email जरूरी है", variant: "destructive" });
+        return false;
+      }
+      if (loginMethod === 'phone' && !phone.trim()) {
+        toast({ title: "Phone number जरूरी है", variant: "destructive" });
+        return false;
+      }
+    } else {
+      if (!phone.trim()) {
+        toast({ title: "Phone number जरूरी है", variant: "destructive" });
+        return false;
+      }
+      if (!email.trim()) {
+        toast({ title: "Email जरूरी है", variant: "destructive" });
+        return false;
+      }
+      if (password !== confirmPassword) {
+        toast({ title: "Passwords match नहीं हो रहे", variant: "destructive" });
+        return false;
+      }
     }
     
-    // Return original or fallback
-    return error.message || 'कुछ गलत हुआ है। फिर से try करें।';
+    if (!password.trim()) {
+      toast({ title: "Password जरूरी है", variant: "destructive" });
+      return false;
+    }
+    
+    return true;
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('AuthForm: Form submission started:', { mode, loginMethod, email, phone });
+    console.log('Form submission started:', { mode, loginMethod, email, phone });
     
-    const isValid = validateForm({
-      mode,
-      loginMethod,
-      email,
-      phone,
-      password,
-      confirmPassword
-    });
-    
-    if (!isValid) {
-      console.log('AuthForm: Form validation failed');
+    if (!validateForm()) {
       return;
     }
     
     setIsLoading(true);
     
     try {
+      // Clear any existing auth state before proceeding
+      cleanupAuthState();
+      
       if (mode === 'login') {
-        const loginEmail = loginMethod === 'email' ? email : `${phone}@easyearn.com`;
-        console.log('AuthForm: Attempting login with email:', loginEmail);
+        const loginEmail = loginMethod === 'email' ? email.trim() : `${phone.trim()}@easyearn.com`;
+        console.log('Attempting login...');
         
         await login(loginEmail, password);
         
         toast({
           title: "Login successful!",
-          description: "Welcome back! Redirecting you now...",
+          description: "Welcome back!",
         });
         
+        // Redirect after success
         setTimeout(() => {
           const selectedPlan = localStorage.getItem('selectedPlan');
           if (selectedPlan) {
-            console.log('AuthForm: Redirecting to payment page with plan:', selectedPlan);
             navigate('/payment');
           } else {
-            console.log('AuthForm: Redirecting to invest page');
             navigate('/invest');
           }
         }, 1000);
         
       } else {
-        console.log('AuthForm: Attempting registration...');
+        console.log('Attempting registration...');
         
-        const result = await register(email, password, phone, referralCode);
-        
-        console.log('AuthForm: Registration result:', result);
+        await register(email.trim(), password, phone.trim(), referralCode.trim());
         
         toast({
           title: "Registration successful!",
-          description: "अपना email check करें account confirm करने के लिए।",
+          description: "Account बन गया है। Login करें।",
         });
         
         if (selectedPlan) {
           localStorage.setItem('selectedPlan', selectedPlan);
-          console.log('AuthForm: Plan saved for after login:', selectedPlan);
         }
         
         setTimeout(() => {
@@ -130,21 +147,18 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       }
       
     } catch (error: any) {
-      console.error('AuthForm: Auth error occurred:', error);
+      console.error('Auth error:', error);
       
-      let errorTitle = mode === 'login' ? "Login failed" : "Registration failed";
-      let errorDescription = getErrorMessage(error);
-      
-      console.log('AuthForm: Showing error toast:', { errorTitle, errorDescription });
+      const errorTitle = mode === 'login' ? "Login failed" : "Registration failed";
+      const errorMessage = getErrorMessage(error);
       
       toast({
         title: errorTitle,
-        description: errorDescription,
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
       setIsLoading(false);
-      console.log('AuthForm: Form submission completed');
     }
   };
   

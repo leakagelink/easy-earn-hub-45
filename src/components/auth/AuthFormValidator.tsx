@@ -1,5 +1,5 @@
 
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface ValidateFormProps {
   mode: 'login' | 'register';
@@ -21,54 +21,33 @@ export const useAuthFormValidator = () => {
     password,
     confirmPassword
   }: ValidateFormProps) => {
+    // Basic field validation
     if (mode === 'login') {
-      if (loginMethod === 'email' && !email) {
-        toast({
-          title: "Email is required",
-          variant: "destructive",
-        });
+      if (loginMethod === 'email' && !email.trim()) {
+        toast({ title: "Email जरूरी है", variant: "destructive" });
         return false;
       }
-      
-      if (loginMethod === 'phone' && !phone) {
-        toast({
-          title: "Phone number is required",
-          variant: "destructive",
-        });
+      if (loginMethod === 'phone' && !phone.trim()) {
+        toast({ title: "Phone number जरूरी है", variant: "destructive" });
         return false;
       }
     } else {
-      // Register mode
-      if (!phone) {
-        toast({
-          title: "Phone number is required",
-          variant: "destructive",
-        });
+      if (!phone.trim()) {
+        toast({ title: "Phone number जरूरी है", variant: "destructive" });
         return false;
       }
-      
-      if (!email) {
-        toast({
-          title: "Email is required",
-          variant: "destructive",
-        });
+      if (!email.trim()) {
+        toast({ title: "Email जरूरी है", variant: "destructive" });
+        return false;
+      }
+      if (password !== confirmPassword) {
+        toast({ title: "Passwords match नहीं हो रहे", variant: "destructive" });
         return false;
       }
     }
     
-    if (!password) {
-      toast({
-        title: "Password is required",
-        variant: "destructive",
-      });
-      return false;
-    }
-    
-    if (mode === 'register' && password !== confirmPassword) {
-      toast({
-        title: "Passwords do not match",
-        variant: "destructive",
-      });
+    if (!password.trim()) {
+      toast({ title: "Password जरूरी है", variant: "destructive" });
       return false;
     }
     
