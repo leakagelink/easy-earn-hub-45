@@ -9,7 +9,6 @@ export interface AuthError {
 export const getErrorMessage = (error: any): AuthError => {
   console.log('Processing auth error:', error);
   
-  // Auth-specific errors - no network errors anymore
   if (error.message?.includes('Invalid login credentials')) {
     return {
       message: 'Email या password गलत है। फिर से try करें।',
@@ -88,7 +87,6 @@ export const validateRegistrationData = (email: string, password: string, phone:
 export const registerUser = async (email: string, password: string, phone: string, referralCode?: string) => {
   console.log('Starting registration process...');
   
-  // Remove network check - directly proceed to registration
   const validationError = validateRegistrationData(email, password, phone);
   if (validationError) {
     throw new Error(validationError.message);
@@ -128,7 +126,6 @@ export const registerUser = async (email: string, password: string, phone: strin
 export const loginUser = async (email: string, password: string) => {
   console.log('Starting login process...');
   
-  // Remove network check - directly proceed to login
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email.trim().toLowerCase(),

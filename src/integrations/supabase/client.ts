@@ -13,22 +13,14 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     detectSessionInUrl: true,
     storage: localStorage,
     flowType: 'pkce'
+  },
+  global: {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    }
   }
 })
 
 console.log('Supabase client created successfully');
-
-// Simplified network connectivity check - remove problematic timeout
-export const checkNetworkConnectivity = async (): Promise<boolean> => {
-  try {
-    // Simple check without AbortSignal.timeout which was causing issues
-    const response = await fetch('https://www.google.com', {
-      method: 'HEAD',
-      mode: 'no-cors'
-    });
-    return true; // If we reach here, network is working
-  } catch (error) {
-    console.log('Network check failed, but continuing anyway:', error);
-    return true; // Always return true to avoid blocking authentication
-  }
-};
