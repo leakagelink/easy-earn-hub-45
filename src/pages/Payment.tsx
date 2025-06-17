@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -16,6 +17,7 @@ const Payment = () => {
   const { toast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const [transactionId, setTransactionId] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('upi');
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
@@ -58,6 +60,7 @@ const Payment = () => {
         planName: selectedPlan.name,
         amount: selectedPlan.price,
         transactionId: transactionId.trim(),
+        paymentMethod: paymentMethod,
         date: new Date().toISOString(),
         status: 'pending',
         type: 'investment'
@@ -130,25 +133,79 @@ const Payment = () => {
 
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Payment Instructions</CardTitle>
+              <CardTitle>Select Payment Method</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="text-center">
-                <p className="mb-4">Pay ₹{selectedPlan.price} using UPI:</p>
-                <div className="bg-gray-100 p-4 rounded-lg mb-4">
-                  <p className="font-mono text-lg">dheerajtagde@ybl</p>
+              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="upi" id="upi" />
+                  <Label htmlFor="upi">UPI / QR Code</Label>
                 </div>
-                <img 
-                  src="/lovable-uploads/c3bb9200-c561-4fcc-8802-68d2f7d2d937.png" 
-                  alt="QR Code" 
-                  className="mx-auto w-48 h-48 object-contain"
-                />
-                <p className="text-sm text-gray-600 mt-4">
-                  Scan the QR code or use the UPI ID to make payment
-                </p>
-              </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="bank" id="bank" />
+                  <Label htmlFor="bank">Bank Transfer</Label>
+                </div>
+              </RadioGroup>
             </CardContent>
           </Card>
+
+          {paymentMethod === 'upi' && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>UPI Payment Instructions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="text-center">
+                  <p className="mb-4">Pay ₹{selectedPlan.price} using UPI:</p>
+                  <div className="bg-gray-100 p-4 rounded-lg mb-4">
+                    <p className="font-mono text-lg">dheerajtagde@ybl</p>
+                  </div>
+                  <img 
+                    src="/lovable-uploads/c3bb9200-c561-4fcc-8802-68d2f7d2d937.png" 
+                    alt="QR Code" 
+                    className="mx-auto w-48 h-48 object-contain"
+                  />
+                  <p className="text-sm text-gray-600 mt-4">
+                    Scan the QR code or use the UPI ID to make payment
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {paymentMethod === 'bank' && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Bank Transfer Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="text-center">
+                  <p className="mb-4">Transfer ₹{selectedPlan.price} to the following bank account:</p>
+                  <div className="bg-gray-100 p-4 rounded-lg space-y-3">
+                    <div className="flex justify-between">
+                      <span className="font-medium">Account Holder:</span>
+                      <span>Dheeraj Tagde</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Account Number:</span>
+                      <span className="font-mono">3512173750</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Bank Name:</span>
+                      <span>Kotak Mahindra</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">IFSC Code:</span>
+                      <span className="font-mono">KKBK0005886</span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-4">
+                    Please save the transaction reference number after making the transfer
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="mb-6">
             <CardHeader>
@@ -156,25 +213,36 @@ const Payment = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="transactionId">Transaction ID / UTR *</Label>
+                <Label htmlFor="transactionId">
+                  {paymentMethod === 'upi' ? 'Transaction ID / UTR *' : 'Transaction Reference Number *'}
+                </Label>
                 <Input
                   id="transactionId"
                   value={transactionId}
                   onChange={(e) => setTransactionId(e.target.value)}
-                  placeholder="Enter transaction ID or UTR number"
+                  placeholder={paymentMethod === 'upi' ? 'Enter transaction ID or UTR number' : 'Enter transaction reference number'}
                   required
                 />
                 <p className="text-sm text-gray-500">
-                  * Please enter the transaction ID/UTR after completing the payment above
+                  * Please enter the transaction details after completing the payment above
                 </p>
               </div>
               
               <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200">
                 <h3 className="font-medium text-yellow-800 mb-2">Important Instructions</h3>
                 <ul className="text-sm text-yellow-700 space-y-1">
-                  <li>• Make the payment using the UPI ID or QR code above</li>
-                  <li>• Save the transaction ID/UTR from your payment app</li>
-                  <li>• Enter the transaction ID in the field below</li>
+                  {paymentMethod === 'upi' ? (
+                    <>
+                      <li>• Make the payment using the UPI ID or QR code above</li>
+                      <li>• Save the transaction ID/UTR from your payment app</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>• Transfer the exact amount to the bank account above</li>
+                      <li>• Save the transaction reference number from your bank</li>
+                    </>
+                  )}
+                  <li>• Enter the transaction details in the field below</li>
                   <li>• Your plan will be activated after admin verification</li>
                 </ul>
               </div>
