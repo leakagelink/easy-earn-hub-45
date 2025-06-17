@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,6 +21,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     console.log('AuthProvider: Starting login process for:', email);
+    
+    // Test connection first
+    try {
+      const { data: healthCheck } = await supabase.auth.getSession();
+      console.log('Connection health check passed');
+    } catch (connectionError) {
+      console.error('Connection health check failed:', connectionError);
+      throw new Error('Unable to connect to authentication service. Please check your internet connection and try again.');
+    }
+    
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
@@ -29,6 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) {
+        console.error('Login error details:', error);
         throw error;
       }
 
@@ -42,6 +52,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = async (email: string, password: string, phone: string, referralCode?: string) => {
     console.log('AuthProvider: Starting registration process for:', email);
+    
+    // Test connection first
+    try {
+      const { data: healthCheck } = await supabase.auth.getSession();
+      console.log('Connection health check passed for registration');
+    } catch (connectionError) {
+      console.error('Connection health check failed for registration:', connectionError);
+      throw new Error('Unable to connect to authentication service. Please check your internet connection and try again.');
+    }
+    
     try {
       // Basic validation
       if (!email || !password || !phone) {
@@ -58,6 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const redirectUrl = `${window.location.origin}/`;
+      console.log('Registration redirect URL:', redirectUrl);
       
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
@@ -72,6 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) {
+        console.error('Registration error details:', error);
         throw error;
       }
 
