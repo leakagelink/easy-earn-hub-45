@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
-import { useAuth } from '@/contexts/auth';
+import { useSupabaseAuth } from '@/contexts/auth/SupabaseAuthProvider';
 import LoginOptions from './auth/LoginOptions';
 import PhoneInput from './auth/PhoneInput';
 import EmailInput from './auth/EmailInput';
@@ -9,7 +10,6 @@ import PasswordInput from './auth/PasswordInput';
 import ReferralInput from './auth/ReferralInput';
 import SubmitButton from './auth/SubmitButton';
 import AuthFooter from './auth/AuthFooter';
-import NetworkStatus from './NetworkStatus';
 
 interface AuthFormProps {
   mode: 'login' | 'register';
@@ -17,32 +17,8 @@ interface AuthFormProps {
 }
 
 const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
-  console.log('🔥 Enhanced AuthForm rendering with mode:', mode);
+  console.log('🔥 Supabase AuthForm rendering with mode:', mode);
   
-  // Add safety check for auth context
-  let authContext;
-  try {
-    authContext = useAuth();
-    console.log('✅ Appwrite Auth context loaded successfully');
-  } catch (error) {
-    console.error('❌ Failed to load Appwrite auth context:', error);
-    return (
-      <div className="mx-auto w-full max-w-md p-6 bg-white rounded-lg shadow-md">
-        <div className="text-center">
-          <h2 className="text-xl font-bold text-red-600 mb-4">Authentication Error</h2>
-          <p className="text-gray-600">Appwrite Auth system loading करने में problem हो रही है...</p>
-          <p className="text-sm text-gray-500 mt-2">Page refresh करके try करें</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Refresh Page
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -53,7 +29,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { login, register } = authContext;
+  const { login, register } = useSupabaseAuth();
   
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -71,8 +47,8 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     console.log('📋 Form submission:', { mode, email, phone, loginMethod });
     
     // Enhanced validation
-    if (!password || password.length < 8) {
-      toast({ title: "Password कम से कम 8 characters का होना चाहिए", variant: "destructive" });
+    if (!password || password.length < 6) {
+      toast({ title: "Password कम से कम 6 characters का होना चाहिए", variant: "destructive" });
       return;
     }
     
@@ -111,20 +87,11 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         console.log('🔑 Attempting login with:', loginEmail);
         await login(loginEmail, password);
         
-        toast({ 
-          title: "✅ Login successful!",
-          description: "आपका login हो गया है"
-        });
         navigate(localStorage.getItem('selectedPlan') ? '/payment' : '/invest');
       } else {
         console.log('📝 Attempting registration...');
         
         await register(email, password, phone, referralCode);
-        
-        toast({ 
-          title: "✅ Registration successful!", 
-          description: "Account बन गया है। अब login करें।" 
-        });
         
         if (selectedPlan) localStorage.setItem('selectedPlan', selectedPlan);
         navigate('/login');
@@ -134,7 +101,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       toast({
         title: mode === 'login' ? "❌ Login Failed" : "❌ Registration Failed",
-        description: error.message || 'कुछ गलत हुआ है। Internet connection check करें।',
+        description: error.message || 'कुछ गलत हुआ है। फिर से कोशिश करें।',
         variant: "destructive"
       });
     } finally {
@@ -144,8 +111,6 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   
   return (
     <div className="mx-auto w-full max-w-md p-6 bg-white rounded-lg shadow-md">
-      <NetworkStatus />
-      
       <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
         {mode === 'login' ? 'अपने account में login करें' : 'नया account बनाएं'}
       </h2>
@@ -193,10 +158,10 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       <div className="mt-4 text-center">
         <p className="text-xs text-green-600 font-medium">
-          🔄 Enhanced System - Multiple Fallbacks
+          🔄 Supabase Authentication System
         </p>
         <p className="text-xs text-gray-500 mt-1">
-          Network issues के लिए automatic backup system
+          Reliable & Secure Authentication
         </p>
       </div>
     </div>

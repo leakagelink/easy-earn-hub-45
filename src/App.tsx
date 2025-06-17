@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import BottomBar from "./components/BottomBar";
-import { AuthProvider } from "./contexts/auth";
+import { SupabaseAuthProvider } from "./contexts/auth/SupabaseAuthProvider";
 
 // Pages
 import Index from "./pages/Index";
@@ -56,7 +56,6 @@ const AppRoutes = () => {
   return (
     <MaintenanceCheck>
       <Routes>
-        {/* Redirect the root path to home page instead of login */}
         <Route path="/" element={<Index />} />
         <Route path="/home" element={<Index />} />
         <Route path="/dashboard" element={<Dashboard />} />
@@ -89,7 +88,7 @@ const AppRoutes = () => {
 };
 
 const App = () => {
-  console.log('🔧 App component rendering...');
+  console.log('🔧 App component rendering with Supabase...');
   
   return (
     <QueryClientProvider client={queryClient}>
@@ -97,9 +96,9 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <AuthProvider>
+          <SupabaseAuthProvider>
             <AppRoutes />
-          </AuthProvider>
+          </SupabaseAuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
