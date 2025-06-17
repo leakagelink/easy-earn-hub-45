@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
-import { useFirebaseAuth } from '@/contexts/auth/FirebaseAuthProvider';
+import { useSupabaseAuth } from '@/contexts/auth/SupabaseAuthProvider';
 import LoginOptions from './auth/LoginOptions';
 import PhoneInput from './auth/PhoneInput';
 import EmailInput from './auth/EmailInput';
@@ -29,7 +29,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { login, register } = useFirebaseAuth();
+  const { login, register } = useSupabaseAuth();
   
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -83,12 +83,12 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     try {
       if (mode === 'login') {
         const loginEmail = loginMethod === 'email' ? email : `${phone}@easyearn.com`;
-        console.log('🔑 Attempting Firebase login with:', loginEmail);
+        console.log('🔑 Attempting Supabase login with:', loginEmail);
         await login(loginEmail, password);
         
         navigate('/invest');
       } else {
-        console.log('📝 Attempting Firebase registration...');
+        console.log('📝 Attempting Supabase registration...');
         
         await register(email, password, phone, referralCode);
         
@@ -102,7 +102,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         }, 2000);
       }
     } catch (error: any) {
-      console.error('💥 Firebase Auth error:', error);
+      console.error('💥 Supabase Auth error:', error);
       
       toast({
         title: mode === 'login' ? "❌ Login Failed" : "❌ Registration Failed",
@@ -163,10 +163,10 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       <div className="mt-4 text-center">
         <p className="text-xs text-green-600 font-medium">
-          🔥 Firebase Authentication System
+          ✅ Supabase Authentication System
         </p>
         <p className="text-xs text-gray-500 mt-1">
-          Secure and reliable Firebase connectivity
+          Secure and reliable connectivity - No network issues
         </p>
       </div>
     </div>

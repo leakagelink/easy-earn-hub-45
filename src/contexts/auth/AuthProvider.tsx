@@ -1,47 +1,46 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useFirebaseAuth } from './FirebaseAuthProvider';
+import React, { createContext, useContext } from 'react';
+import { useSupabaseAuth } from './SupabaseAuthProvider';
 import { AuthContextType } from './types';
-import { User } from 'firebase/auth';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    // Fallback to Firebase auth if main auth context is not available
-    const firebaseAuth = useFirebaseAuth();
+    // Direct fallback to Supabase auth
+    const supabaseAuth = useSupabaseAuth();
     return {
-      currentUser: convertFirebaseUser(firebaseAuth.currentUser),
-      login: firebaseAuth.login,
-      logout: firebaseAuth.logout,
-      register: firebaseAuth.register,
-      loading: firebaseAuth.loading,
+      currentUser: convertSupabaseUser(supabaseAuth.currentUser),
+      login: supabaseAuth.login,
+      logout: supabaseAuth.logout,
+      register: supabaseAuth.register,
+      loading: supabaseAuth.loading,
       userProfile: null,
-      isAdmin: firebaseAuth.isAdmin
+      isAdmin: supabaseAuth.isAdmin
     } as AuthContextType;
   }
   return context;
 }
 
-// Convert Firebase User to ExtendedUser format
-const convertFirebaseUser = (user: User | null): AuthContextType['currentUser'] => {
+// Convert Supabase User to ExtendedUser format
+const convertSupabaseUser = (user: any): AuthContextType['currentUser'] => {
   if (!user) return null;
   
   return {
-    $id: user.uid,
-    $createdAt: user.metadata.creationTime || '',
-    $updatedAt: user.metadata.lastSignInTime || '',
-    name: user.displayName || '',
+    $id: user.id,
+    $createdAt: user.created_at || '',
+    $updatedAt: user.updated_at || '',
+    name: user.user_metadata?.name || '',
     email: user.email || '',
-    phone: user.phoneNumber || '',
-    emailVerification: user.emailVerified,
+    phone: user.user_metadata?.phone || '',
+    emailVerification: user.email_confirmed_at ? true : false,
     phoneVerification: false,
     prefs: {},
     status: true,
     passwordUpdate: '',
-    registration: user.metadata.creationTime || '',
-    accessedAt: user.metadata.lastSignInTime || '',
+    registration: user.created_at || '',
+    accessedAt: user.last_sign_in_at || '',
     labels: [],
     mfa: false,
     targets: []
@@ -49,17 +48,17 @@ const convertFirebaseUser = (user: User | null): AuthContextType['currentUser'] 
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const firebaseAuth = useFirebaseAuth();
+  const supabaseAuth = useSupabaseAuth();
   
-  // Convert Firebase auth to match AuthContextType interface
+  // Convert Supabase auth to match AuthContextType interface
   const value: AuthContextType = {
-    currentUser: convertFirebaseUser(firebaseAuth.currentUser),
-    login: firebaseAuth.login,
-    logout: firebaseAuth.logout,
-    register: firebaseAuth.register,
-    loading: firebaseAuth.loading,
+    currentUser: convertSupabaseUser(supabaseAuth.currentUser),
+    login: supabaseAuth.login,
+    logout: supabaseAuth.logout,
+    register: supabaseAuth.register,
+    loading: supabaseAuth.loading,
     userProfile: null,
-    isAdmin: firebaseAuth.isAdmin
+    isAdmin: supabaseAuth.isAdmin
   };
 
   return (

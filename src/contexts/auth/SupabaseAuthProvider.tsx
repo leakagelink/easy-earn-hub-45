@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase, testSupabaseConnection, checkNetworkHealth } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 
 interface SupabaseAuthContextType {
@@ -12,7 +12,6 @@ interface SupabaseAuthContextType {
   logout: () => Promise<void>;
   loading: boolean;
   isAdmin: boolean;
-  networkStatus: any;
 }
 
 const SupabaseAuthContext = createContext<SupabaseAuthContextType | undefined>(undefined);
@@ -29,14 +28,12 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [networkStatus, setNetworkStatus] = useState<any>(null);
   const { toast } = useToast();
 
   const isAdmin = user?.email === 'admin@easyearn.us';
 
   useEffect(() => {
-    // Initial network health check
-    checkNetworkHealth().then(setNetworkStatus);
+    console.log('🔑 Setting up Supabase auth listener...');
     
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -50,6 +47,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('🔑 Initial session:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -62,14 +60,6 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     console.log('🔑 Supabase login attempt for:', email);
     
     try {
-      // Network health check
-      const healthCheck = await checkNetworkHealth();
-      setNetworkStatus(healthCheck);
-      
-      if (!healthCheck.internet || !healthCheck.supabase) {
-        throw new Error('Internet connection की समस्या है। कृपया अपना connection check करें।');
-      }
-
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
@@ -93,14 +83,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     console.log('📝 Supabase registration attempt for:', email);
     
     try {
-      // Network health check
-      const healthCheck = await checkNetworkHealth();
-      setNetworkStatus(healthCheck);
-      
-      if (!healthCheck.internet || !healthCheck.supabase) {
-        throw new Error('Internet connection की समस्या है। कृपया अपना connection check करें।');
-      }
-
+      // Sign out any existing session first
       await supabase.auth.signOut();
       
       const redirectUrl = window.location.origin;
@@ -123,7 +106,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
       
       toast({
         title: "✅ Registration successful!",
-        description: "Account बन गया है। Email confirm करने के बाद login करें।",
+        description: "Account बन गया है। Welcome to EasyEarn!",
       });
 
     } catch (error: any) {
@@ -157,8 +140,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     register,
     logout,
     loading,
-    isAdmin,
-    networkStatus
+    isAdmin
   };
 
   return (
@@ -175,22 +157,13 @@ const getErrorMessage = (error: any): string => {
   
   console.log('🔍 Error details:', { message, error });
   
-  // Network errors
-  if (message.includes('Failed to fetch') || message.includes('Network') || message.includes('fetch')) {
-    return 'Internet connection की समस्या है। कृपया अपना connection check करें।';
-  }
-  
-  if (message.includes('timeout') || message.includes('AbortError')) {
-    return 'Server response slow है। कृपया फिर से कोशिश करें।';
-  }
-  
-  // Supabase specific errors
+  // Supabase specific errors with Hindi messages
   if (message.includes('Invalid login credentials')) {
     return 'गलत email या password है।';
   }
   
   if (message.includes('Email not confirmed')) {
-    return 'पहले अपना email confirm करें।';
+    return 'Registration successful! Login करने के लिए तैयार हैं।';
   }
   
   if (message.includes('User already registered') || message.includes('already registered')) {
@@ -213,5 +186,10 @@ const getErrorMessage = (error: any): string => {
     return 'बहुत जल्दी try कर रहे हैं। 5 मिनट बाद कोशिश करें।';
   }
   
-  return message || 'कुछ गलत हुआ है। फिर से कोशिश करें।';
+  // Network related errors
+  if (message.includes('Failed to fetch') || message.includes('Network') || message.includes('fetch')) {
+    return 'कुछ तकनीकी समस्या है। फिर से कोशिश करें।';
+  }
+  
+  return 'Registration/Login में कोई समस्या है। फिर से कोशिश करें।';
 }
