@@ -8,81 +8,89 @@ export interface AuthOperationsParams {
   setIsAdmin: (isAdmin: boolean) => void;
 }
 
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const retryOperation = async (operation: () => Promise<any>, maxRetries = 3) => {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await operation();
+    } catch (error: any) {
+      console.log(`Attempt ${i + 1} failed:`, error);
+      if (i === maxRetries - 1) throw error;
+      await delay(1000 * (i + 1)); // Exponential backoff
+    }
+  }
+};
+
 export const createAuthOperations = ({ setCurrentUser, setSession, setIsAdmin }: AuthOperationsParams) => {
   const login = async (email: string, password: string) => {
+    console.log('Starting login process for:', email);
+    
     try {
-      console.log('Attempting Supabase login for:', email);
+      // Clean up any existing session
+      await supabase.auth.signOut();
+      await delay(500);
       
-      // Clear any existing session first
-      try {
-        await supabase.auth.signOut();
-      } catch (err) {
-        console.log('Sign out error (ignoring):', err);
-      }
-      
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password: password
+      const result = await retryOperation(async () => {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password: password
+        });
+
+        if (error) {
+          console.error('Login error:', error);
+          throw new Error(error.message);
+        }
+
+        return data;
       });
 
-      if (error) {
-        console.error('Supabase login error:', error);
-        throw new Error(error.message || 'Login failed');
-      }
-
-      console.log('Supabase login successful:', data.user?.email);
-      return data;
+      console.log('Login successful:', result.user?.email);
+      return result;
     } catch (error: any) {
       console.error('Login failed:', error);
-      if (error.message?.includes('fetch')) {
-        throw new Error('Internet connection problem. Please check your connection and try again.');
-      }
-      throw error;
+      throw new Error(error.message || 'Login failed');
     }
   };
 
   const register = async (email: string, password: string, phone: string, referralCode?: string) => {
+    console.log('Starting registration for:', email);
+    
     try {
-      console.log('Starting Supabase registration for:', email);
-      
-      // Clear any existing session first
-      try {
-        await supabase.auth.signOut();
-      } catch (err) {
-        console.log('Sign out error (ignoring):', err);
-      }
+      // Clean up any existing session
+      await supabase.auth.signOut();
+      await delay(500);
       
       // Get current domain for redirect
       const currentDomain = window.location.origin;
+      console.log('Using redirect domain:', currentDomain);
       
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
-        password: password,
-        options: {
-          emailRedirectTo: `${currentDomain}/`,
-          data: {
-            phone: phone.trim().replace(/\D/g, ''),
-            referralCode: referralCode?.trim() || ''
+      const result = await retryOperation(async () => {
+        const { data, error } = await supabase.auth.signUp({
+          email: email.trim().toLowerCase(),
+          password: password,
+          options: {
+            emailRedirectTo: `${currentDomain}/`,
+            data: {
+              phone: phone.trim().replace(/\D/g, ''),
+              referralCode: referralCode?.trim() || ''
+            }
           }
+        });
+
+        if (error) {
+          console.error('Registration error:', error);
+          throw new Error(error.message);
         }
+
+        return data;
       });
 
-      if (error) {
-        console.error('Supabase registration error:', error);
-        if (error.message?.includes('fetch')) {
-          throw new Error('Internet connection problem. Please check your connection and try again.');
-        }
-        throw new Error(error.message || 'Registration failed');
-      }
-
-      console.log('Supabase registration successful:', data.user?.email);
-      return data;
+      console.log('Registration successful:', result.user?.email);
+      return result;
     } catch (error: any) {
       console.error('Registration failed:', error);
-      if (error.message?.includes('fetch')) {
-        throw new Error('Internet connection problem. Please check your connection and try again.');
-      }
-      throw error;
+      throw new Error(error.message || 'Registration failed');
     }
   };
 

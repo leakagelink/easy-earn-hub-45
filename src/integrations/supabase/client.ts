@@ -14,23 +14,15 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     storage: localStorage,
     flowType: 'pkce'
   },
+  db: {
+    schema: 'public'
+  },
   global: {
     headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
-    },
-    fetch: (url: string, options: RequestInit = {}) => {
-      console.log('Supabase fetch:', url);
-      return fetch(url, {
-        ...options,
-        headers: {
-          ...options.headers,
-          'Access-Control-Allow-Origin': '*'
-        }
-      }).catch(error => {
-        console.error('Fetch error:', error);
-        throw new Error('Network connection failed. Please check your internet connection.');
-      });
+      'apikey': supabaseKey,
+      'authorization': `Bearer ${supabaseKey}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
     }
   }
 })

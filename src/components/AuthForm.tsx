@@ -32,30 +32,34 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const validateForm = () => {
     if (mode === 'login') {
       if (loginMethod === 'email' && !email.trim()) {
-        toast({ title: "Email जरूरी है", variant: "destructive" });
+        toast({ title: "Email required", variant: "destructive" });
         return false;
       }
       if (loginMethod === 'phone' && !phone.trim()) {
-        toast({ title: "Phone number जरूरी है", variant: "destructive" });
+        toast({ title: "Phone number required", variant: "destructive" });
         return false;
       }
     } else {
       if (!phone.trim()) {
-        toast({ title: "Phone number जरूरी है", variant: "destructive" });
+        toast({ title: "Phone number required", variant: "destructive" });
         return false;
       }
       if (!email.trim()) {
-        toast({ title: "Email जरूरी है", variant: "destructive" });
+        toast({ title: "Email required", variant: "destructive" });
         return false;
       }
       if (password !== confirmPassword) {
-        toast({ title: "Passwords match नहीं हो रहे", variant: "destructive" });
+        toast({ title: "Passwords do not match", variant: "destructive" });
+        return false;
+      }
+      if (password.length < 6) {
+        toast({ title: "Password must be at least 6 characters", variant: "destructive" });
         return false;
       }
     }
     
     if (!password.trim()) {
-      toast({ title: "Password जरूरी है", variant: "destructive" });
+      toast({ title: "Password required", variant: "destructive" });
       return false;
     }
     
@@ -78,11 +82,16 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         const loginEmail = loginMethod === 'email' ? email.trim() : `${phone.trim()}@easyearn.com`;
         console.log('Attempting login...');
         
+        toast({
+          title: "Logging in...",
+          description: "Please wait while we sign you in.",
+        });
+        
         await login(loginEmail, password);
         
         toast({
-          title: "Login successful! ✅",
-          description: "Welcome back!",
+          title: "Welcome back! ✅",
+          description: "Login successful!",
         });
         
         // Check if user was trying to buy a plan
@@ -96,11 +105,16 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       } else {
         console.log('Attempting registration...');
         
+        toast({
+          title: "Creating account...",
+          description: "Please wait while we create your account.",
+        });
+        
         await register(email.trim(), password, phone.trim(), referralCode.trim());
         
         toast({
-          title: "Registration successful! ✅",
-          description: "Account बन गया है! Please check your email to verify your account.",
+          title: "Account created successfully! ✅",
+          description: "Please check your email to verify your account.",
           duration: 5000,
         });
         
@@ -124,10 +138,15 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       console.error('Auth error:', error);
       
       const errorTitle = mode === 'login' ? "Login failed ❌" : "Registration failed ❌";
-      
       let errorMessage = error.message;
-      if (error.message?.includes('fetch') || error.message?.includes('network')) {
-        errorMessage = 'Internet connection problem है। कुछ देर बाद try करें या अपना connection check करें।';
+      
+      // Handle specific error messages
+      if (error.message?.includes('Invalid login credentials')) {
+        errorMessage = 'Email या password गलत है। कृपया फिर से कोशिश करें।';
+      } else if (error.message?.includes('User already registered')) {
+        errorMessage = 'यह email पहले से registered है। Login करने की कोशिश करें।';
+      } else if (error.message?.includes('fetch') || error.message?.includes('network')) {
+        errorMessage = 'Internet connection problem है। कुछ देर बाद try करें।';
       }
       
       toast({
@@ -192,7 +211,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       <div className="mt-4 text-center">
         <p className="text-xs text-green-600 font-medium">
-          ✅ Full Supabase integration active
+          ✅ Enhanced Supabase integration with retry mechanism
         </p>
       </div>
     </div>
