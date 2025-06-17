@@ -54,8 +54,8 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <AuthProvider>
-        <BrowserRouter>
+      <BrowserRouter>
+        <AuthProvider>
           <MaintenanceCheck>
             <Routes>
               {/* Redirect the root path to login page */}
@@ -87,8 +87,8 @@ const App = () => (
             </Routes>
             <BottomBar />
           </MaintenanceCheck>
-        </BrowserRouter>
-      </AuthProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );
