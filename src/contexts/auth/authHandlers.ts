@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { getSupabaseErrorMessage } from './errorUtils';
 import { setUserStorage, clearUserStorage, checkIsAdmin } from './storageUtils';
@@ -53,27 +54,9 @@ export const handleRegister = async (
       throw new Error('Password must be at least 6 characters long');
     }
     
-    // Check network connectivity
-    if (!navigator.onLine) {
-      throw new Error('No internet connection. Please check your network and try again.');
-    }
-    
     // Get the current origin for redirect URL
     const currentOrigin = window.location.origin;
     console.log('Using redirect URL:', currentOrigin);
-    
-    // Test Supabase connection first
-    try {
-      console.log('Testing Supabase connection...');
-      const { error: testError } = await supabase.auth.getSession();
-      if (testError) {
-        console.error('Supabase connection test failed:', testError);
-      } else {
-        console.log('Supabase connection test successful');
-      }
-    } catch (testError) {
-      console.error('Supabase connection test error:', testError);
-    }
     
     console.log('Attempting registration with Supabase...');
     const { data, error } = await supabase.auth.signUp({
@@ -90,10 +73,6 @@ export const handleRegister = async (
     
     if (error) {
       console.error('Supabase signup error:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.status
-      });
       throw error;
     }
     
@@ -105,21 +84,7 @@ export const handleRegister = async (
     }
     
   } catch (error: any) {
-    console.error('Registration error details:', {
-      message: error.message,
-      name: error.name,
-      stack: error.stack
-    });
-    
-    // Handle specific error types
-    if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      throw new Error('Unable to connect to the server. Please check your internet connection and try again.');
-    }
-    
-    if (error.message.includes('Failed to fetch')) {
-      throw new Error('Network connection error. Please check your internet connection and try again.');
-    }
-    
+    console.error('Registration error:', error);
     throw new Error(getSupabaseErrorMessage(error.message));
   }
 };

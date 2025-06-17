@@ -19,22 +19,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   },
   global: {
     headers: {
-      'Content-Type': 'application/json',
-      'apikey': SUPABASE_PUBLISHABLE_KEY,
-      'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
-    },
-    fetch: (url: string, options: RequestInit = {}) => {
-      console.log('Supabase request to:', url);
-      
-      return fetch(url, {
-        ...options,
-        headers: {
-          ...options.headers,
-        },
-      }).catch(error => {
-        console.error('Network request failed:', error);
-        throw new Error('Network connection error. Please check your internet connection and try again.');
-      });
+      'Content-Type': 'application/json'
     }
   },
   db: {

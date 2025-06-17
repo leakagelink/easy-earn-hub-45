@@ -6,6 +6,16 @@ export const getSupabaseErrorMessage = (errorMessage: string) => {
     return 'An unexpected error occurred. Please try again.';
   }
   
+  // Handle specific network and connection errors
+  if (errorMessage.includes('Failed to fetch') || 
+      errorMessage.includes('fetch') || 
+      errorMessage.includes('NetworkError') || 
+      errorMessage.includes('network') ||
+      errorMessage.includes('Unable to connect') ||
+      errorMessage.includes('No internet connection')) {
+    return 'Connection error. Please check your internet connection and try again. If the problem persists, Supabase servers may be temporarily unavailable.';
+  }
+  
   if (errorMessage.includes('Invalid login credentials')) {
     return 'Invalid email or password. Please try again.';
   }
@@ -21,20 +31,8 @@ export const getSupabaseErrorMessage = (errorMessage: string) => {
   if (errorMessage.includes('Too many requests')) {
     return 'Too many failed attempts. Please try again later.';
   }
-  if (errorMessage.includes('Failed to fetch') || errorMessage.includes('fetch')) {
-    return 'Network connection error. Please check your internet connection and try again.';
-  }
-  if (errorMessage.includes('NetworkError') || errorMessage.includes('network')) {
-    return 'Network connection error. Please check your internet connection and try again.';
-  }
   if (errorMessage.includes('CORS')) {
     return 'Connection error. Please try again in a moment.';
-  }
-  if (errorMessage.includes('Unable to connect')) {
-    return 'Unable to connect to server. Please check your internet connection and try again.';
-  }
-  if (errorMessage.includes('No internet connection')) {
-    return 'No internet connection. Please check your network and try again.';
   }
   
   return errorMessage || 'An error occurred. Please try again.';
