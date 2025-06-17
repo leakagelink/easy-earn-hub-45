@@ -5,6 +5,18 @@ interface FallbackUser {
   name: string;
   phone?: string;
   createdAt: string;
+  // Add missing properties to match ExtendedUser
+  $createdAt: string;
+  $updatedAt: string;
+  registration: string;
+  status: boolean;
+  labels: string[];
+  passwordUpdate: string;
+  emailVerification: boolean;
+  phoneVerification: boolean;
+  prefs: Record<string, any>;
+  targets: any[];
+  accessedAt: string;
 }
 
 interface FallbackSession {
@@ -27,12 +39,25 @@ export class FallbackAuthSystem {
       throw new Error('User already exists with this email');
     }
     
+    const now = new Date().toISOString();
     const user: FallbackUser = {
       $id: 'fallback_' + Date.now(),
       email,
       name: email.split('@')[0],
       phone,
-      createdAt: new Date().toISOString()
+      createdAt: now,
+      // Add missing properties for ExtendedUser compatibility
+      $createdAt: now,
+      $updatedAt: now,
+      registration: now,
+      status: true,
+      labels: [],
+      passwordUpdate: now,
+      emailVerification: false,
+      phoneVerification: false,
+      prefs: {},
+      targets: [],
+      accessedAt: now
     };
     
     // Store user credentials (in real app, never store plain passwords)
@@ -60,6 +85,11 @@ export class FallbackAuthSystem {
     if (!storedPassword || atob(storedPassword) !== password) {
       throw new Error('Invalid password');
     }
+    
+    // Update access time
+    const now = new Date().toISOString();
+    user.accessedAt = now;
+    user.$updatedAt = now;
     
     const session: FallbackSession = {
       user,

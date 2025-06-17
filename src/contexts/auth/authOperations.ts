@@ -28,7 +28,7 @@ export const createAuthOperations = ({ setCurrentUser, setUserProfile, setIsAdmi
       if (!networkStatus.canReachAppwrite) {
         console.log('⚠️ Appwrite unreachable, using fallback auth...');
         const session = FallbackAuthSystem.login(email, password);
-        const user = session.user as ExtendedUser;
+        const user = session.user as unknown as ExtendedUser;
         setCurrentUser(user);
         return { user, session };
       }
@@ -48,7 +48,7 @@ export const createAuthOperations = ({ setCurrentUser, setUserProfile, setIsAdmi
         console.log('🔄 Trying fallback authentication...');
         try {
           const session = FallbackAuthSystem.login(email, password);
-          const user = session.user as ExtendedUser;
+          const user = session.user as unknown as ExtendedUser;
           setCurrentUser(user);
           return { user, session };
         } catch (fallbackError: any) {
@@ -86,7 +86,7 @@ export const createAuthOperations = ({ setCurrentUser, setUserProfile, setIsAdmi
       if (!networkStatus.canReachAppwrite) {
         console.log('⚠️ Appwrite unreachable, using fallback registration...');
         const user = FallbackAuthSystem.register(cleanEmail, password, cleanPhone);
-        return { user };
+        return { user: user as unknown as ExtendedUser };
       }
       
       // Try enhanced Appwrite client
@@ -126,7 +126,7 @@ export const createAuthOperations = ({ setCurrentUser, setUserProfile, setIsAdmi
         console.log('🔄 Trying fallback registration...');
         try {
           const user = FallbackAuthSystem.register(email, password, phone);
-          return { user };
+          return { user: user as unknown as ExtendedUser };
         } catch (fallbackError: any) {
           throw new Error('Network issue के कारण registration नहीं हो सका। कुछ देर बाद try करें।');
         }

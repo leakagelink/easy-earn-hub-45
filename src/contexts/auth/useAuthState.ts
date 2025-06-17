@@ -25,7 +25,7 @@ export const useAuthState = () => {
           
           const fallbackSession = FallbackAuthSystem.getCurrentSession();
           if (fallbackSession) {
-            const user = fallbackSession.user as ExtendedUser;
+            const user = fallbackSession.user as unknown as ExtendedUser;
             setCurrentUser(user);
             setIsAdmin(user.email === 'admin@easyearn.us');
             console.log('✅ Fallback session restored');
@@ -63,7 +63,7 @@ export const useAuthState = () => {
         // Check for fallback session
         const fallbackSession = FallbackAuthSystem.getCurrentSession();
         if (fallbackSession) {
-          const user = fallbackSession.user as ExtendedUser;
+          const user = fallbackSession.user as unknown as ExtendedUser;
           setCurrentUser(user);
           setIsAdmin(user.email === 'admin@easyearn.us');
           console.log('✅ Using fallback session');
