@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -59,6 +58,9 @@ const Dashboard = () => {
     try {
       setIsLoading(true);
       
+      let formattedInvestments: Investment[] = [];
+      let formattedTransactions: Transaction[] = [];
+      
       // Fetch user investments
       const { data: investmentsData, error: investmentsError } = await supabase
         .from('user_investments')
@@ -68,7 +70,7 @@ const Dashboard = () => {
       if (investmentsError) {
         console.error('Error fetching investments:', investmentsError);
       } else {
-        const formattedInvestments = investmentsData?.map(inv => ({
+        formattedInvestments = investmentsData?.map(inv => ({
           id: inv.id,
           planId: inv.plan_id || '',
           amount: inv.amount || 0,
@@ -92,7 +94,7 @@ const Dashboard = () => {
       if (transactionsError) {
         console.error('Error fetching transactions:', transactionsError);
       } else {
-        const formattedTransactions = transactionsData?.map(t => ({
+        formattedTransactions = transactionsData?.map(t => ({
           id: t.id,
           type: t.type || '',
           amount: t.amount || 0,
@@ -100,15 +102,15 @@ const Dashboard = () => {
           createdAt: t.created_at || ''
         })) || [];
         setTransactions(formattedTransactions);
-
-        // Calculate totals
-        const totalInvested = formattedInvestments.reduce((sum, inv) => sum + Number(inv.amount), 0);
-        const totalEarnings = formattedTransactions.filter(t => t.type === 'earning')
-          .reduce((sum, t) => sum + Number(t.amount), 0);
-        
-        setBalance(totalInvested + totalEarnings);
-        setTotalEarned(totalEarnings);
       }
+
+      // Calculate totals
+      const totalInvested = formattedInvestments.reduce((sum, inv) => sum + Number(inv.amount), 0);
+      const totalEarnings = formattedTransactions.filter(t => t.type === 'earning')
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+      
+      setBalance(totalInvested + totalEarnings);
+      setTotalEarned(totalEarnings);
 
     } catch (error: any) {
       console.error('Error fetching user data:', error);
