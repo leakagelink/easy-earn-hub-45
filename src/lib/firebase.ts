@@ -19,11 +19,6 @@ const app = initializeApp(firebaseConfig);
 // Initialize Firebase Authentication and get a reference to the service
 export const auth = getAuth(app);
 
-// Configure auth settings for better connectivity
-auth.settings = {
-  appVerificationDisabledForTesting: false
-};
-
 // Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
 

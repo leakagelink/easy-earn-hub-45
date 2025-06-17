@@ -1,5 +1,5 @@
 
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile, UserCredential } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { getFirebaseErrorMessage } from './errorUtils';
@@ -96,11 +96,11 @@ export const handleRegister = async (
     
     // Add timeout to the registration request
     const registrationPromise = createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
-    const timeoutPromise = new Promise((_, reject) => 
+    const timeoutPromise = new Promise<never>((_, reject) => 
       setTimeout(() => reject(new Error('Registration timeout. Please try again.')), 30000)
     );
     
-    const userCredential = await Promise.race([registrationPromise, timeoutPromise]);
+    const userCredential: UserCredential = await Promise.race([registrationPromise, timeoutPromise]);
     const user = userCredential.user;
     
     if (user) {
