@@ -49,13 +49,13 @@ const MaintenanceCheck = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// AppRoutes component that contains all routes and is wrapped by AuthProvider
+// AppRoutes component that contains all routes
 const AppRoutes = () => {
   return (
     <MaintenanceCheck>
       <Routes>
-        {/* Redirect the root path to login page */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        {/* Redirect the root path to home page instead of login */}
+        <Route path="/" element={<Index />} />
         <Route path="/home" element={<Index />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
