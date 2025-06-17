@@ -19,16 +19,19 @@ export const createAuthOperations = ({ setCurrentUser, setSession, setIsAdmin }:
       
       // Handle both Supabase and fallback responses
       if (data.user) {
+        let userToSet: ExtendedUser;
+        
         // If it's a Supabase user, use it directly
         if (data.session && 'access_token' in data.session) {
-          setCurrentUser(data.user);
+          userToSet = data.user as ExtendedUser;
           setSession(data.session);
         } else {
           // For fallback users, create a compatible user object
-          const fallbackUser = createFallbackUser(data.user);
-          setCurrentUser(fallbackUser);
+          userToSet = createFallbackUser(data.user);
           setSession(null);
         }
+        
+        setCurrentUser(userToSet);
         
         const userEmail = data.user.email || '';
         setIsAdmin(isAdminUser(userEmail));
@@ -52,16 +55,17 @@ export const createAuthOperations = ({ setCurrentUser, setSession, setIsAdmin }:
       if (data.user) {
         console.log('Registration successful, user created:', data.user.email);
         
-        // Always use createFallbackUser to ensure proper formatting
-        const userObject = 'access_token' in (data.session || {}) ? data.user : createFallbackUser(data.user);
+        // Always ensure proper user formatting
+        let userToSet: ExtendedUser;
         
         // If it's a Supabase user (has session), set the session
         if (data.session && 'access_token' in data.session) {
+          userToSet = data.user as ExtendedUser;
           setSession(data.session);
-          setCurrentUser(userObject);
+          setCurrentUser(userToSet);
         } else {
-          // For fallback users, don't set as current user
-          // Let them login after registration
+          // For fallback users, create a compatible user object but don't set as current
+          userToSet = createFallbackUser(data.user);
           console.log('Fallback user created, user should login');
         }
       }
