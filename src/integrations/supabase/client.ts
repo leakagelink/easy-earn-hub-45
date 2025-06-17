@@ -14,10 +14,30 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: 'pkce'
   },
   global: {
     headers: {
       'Content-Type': 'application/json',
+      'apikey': SUPABASE_PUBLISHABLE_KEY,
+      'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
     },
+    fetch: (url, options = {}) => {
+      console.log('Supabase request to:', url);
+      
+      return fetch(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+        },
+      }).catch(error => {
+        console.error('Network request failed:', error);
+        throw new Error('Network connection error. Please check your internet connection and try again.');
+      });
+    }
   },
+  db: {
+    schema: 'public'
+  }
 });

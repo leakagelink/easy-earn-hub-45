@@ -36,6 +36,16 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     
     console.log('Form submission started:', { mode, loginMethod, email, phone });
     
+    // Check network connectivity
+    if (!navigator.onLine) {
+      toast({
+        title: "No Internet Connection",
+        description: "Please check your network connection and try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     const isValid = validateForm({
       mode,
       loginMethod,
@@ -76,7 +86,26 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       } else {
         console.log('Attempting registration with:', { email, phone, referralCode });
         
-        await register(email, password, phone, referralCode);
+        // Add retry mechanism for registration
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (attempts < maxAttempts) {
+          try {
+            await register(email, password, phone, referralCode);
+            break; // Success, exit loop
+          } catch (error: any) {
+            attempts++;
+            console.log(`Registration attempt ${attempts} failed:`, error.message);
+            
+            if (attempts >= maxAttempts) {
+              throw error; // Re-throw the last error
+            }
+            
+            // Wait before retry (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+          }
+        }
         
         toast({
           title: "Registration successful",
@@ -94,9 +123,17 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       }
     } catch (error: any) {
       console.error('Auth error:', error);
+      
+      let errorMessage = error.message || "Something went wrong. Please try again.";
+      
+      // Additional error handling for common issues
+      if (errorMessage.includes('fetch')) {
+        errorMessage = "Network connection error. Please check your internet connection and try again.";
+      }
+      
       toast({
         title: mode === 'login' ? "Login failed" : "Registration failed",
-        description: error.message || "Something went wrong. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
