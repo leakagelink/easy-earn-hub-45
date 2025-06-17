@@ -66,7 +66,6 @@ const RechargeForm = () => {
         payment_method: paymentMethod
       });
 
-      // Submit recharge request to Supabase
       const { data, error } = await supabase
         .from('payment_requests')
         .insert({
@@ -81,42 +80,14 @@ const RechargeForm = () => {
 
       if (error) {
         console.error('Recharge request submission error:', error);
-        
-        // Handle network errors gracefully
-        if (error.message?.includes('Failed to fetch') || error.message?.includes('Network')) {
-          console.log('Network error detected, using fallback approach...');
-          
-          // Store the request locally as backup
-          const fallbackRequest = {
-            user_id: currentUser.id,
-            plan_id: null,
-            amount: Number(amount),
-            transaction_id: transactionId || 'UPI Payment',
-            payment_method: paymentMethod,
-            status: 'pending',
-            created_at: new Date().toISOString(),
-            type: 'recharge'
-          };
-          
-          // Save to localStorage as backup
-          const existingRequests = JSON.parse(localStorage.getItem('pendingPaymentRequests') || '[]');
-          existingRequests.push(fallbackRequest);
-          localStorage.setItem('pendingPaymentRequests', JSON.stringify(existingRequests));
-          
-          toast({
-            title: "Recharge Request Saved",
-            description: "Your recharge request has been saved and will be processed when connection is restored.",
-          });
-        } else {
-          throw error;
-        }
-      } else {
-        console.log('Recharge request submitted successfully:', data);
-        toast({
-          title: "Recharge request submitted",
-          description: `Your recharge request for ₹${amount} has been submitted for verification.`,
-        });
+        throw error;
       }
+
+      console.log('Recharge request submitted successfully:', data);
+      toast({
+        title: "Recharge request submitted",
+        description: `Your recharge request for ₹${amount} has been submitted for verification.`,
+      });
       
       setAmount('');
       setTransactionId('');
@@ -124,7 +95,6 @@ const RechargeForm = () => {
     } catch (error: any) {
       console.error('Recharge submission error:', error);
       
-      // Provide more specific error messages
       let errorMessage = "There was an error submitting your recharge request. Please try again.";
       
       if (error.message?.includes('Failed to fetch')) {

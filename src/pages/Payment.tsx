@@ -59,7 +59,6 @@ const Payment = () => {
         payment_method: paymentMethod
       });
 
-      // Try to submit to Supabase
       const { data, error } = await supabase
         .from('payment_requests')
         .insert({
@@ -73,51 +72,22 @@ const Payment = () => {
         .select();
 
       if (error) {
-        console.error('Supabase error:', error);
-        
-        // If it's a network error, try fallback approach
-        if (error.message?.includes('Failed to fetch') || error.message?.includes('Network')) {
-          console.log('Network error detected, using fallback approach...');
-          
-          // Store the request locally as backup
-          const fallbackRequest = {
-            user_id: currentUser.id,
-            plan_id: selectedPlan.id,
-            amount: selectedPlan.price,
-            transaction_id: transactionId.trim(),
-            payment_method: paymentMethod,
-            status: 'pending',
-            created_at: new Date().toISOString()
-          };
-          
-          // Save to localStorage as backup
-          const existingRequests = JSON.parse(localStorage.getItem('pendingPaymentRequests') || '[]');
-          existingRequests.push(fallbackRequest);
-          localStorage.setItem('pendingPaymentRequests', JSON.stringify(existingRequests));
-          
-          toast({
-            title: "Payment Request Saved",
-            description: "Your payment request has been saved and will be processed when connection is restored.",
-          });
-        } else {
-          throw error;
-        }
-      } else {
-        console.log('Payment request submitted successfully:', data);
-        toast({
-          title: "Payment Request Submitted!",
-          description: `Your payment request for ${selectedPlan.name} has been submitted for verification. You will be notified once approved.`,
-        });
+        console.error('Payment submission error:', error);
+        throw error;
       }
 
-      // Clear selected plan from localStorage
+      console.log('Payment request submitted successfully:', data);
+      toast({
+        title: "Payment Request Submitted!",
+        description: `Your payment request for ${selectedPlan.name} has been submitted for verification. You will be notified once approved.`,
+      });
+
       localStorage.removeItem('selectedPlan');
       navigate('/dashboard');
 
     } catch (error: any) {
       console.error('Payment submission error:', error);
       
-      // Provide more specific error messages
       let errorMessage = "There was an error submitting your payment request. Please try again.";
       
       if (error.message?.includes('Failed to fetch')) {
