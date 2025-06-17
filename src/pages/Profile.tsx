@@ -10,14 +10,12 @@ import { User, Mail, Phone, Key } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/auth";
-import { updatePassword } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '@/integrations/firebase/client';
+import { account, databases, DATABASE_ID, COLLECTIONS } from '@/integrations/appwrite/client';
 
 const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { currentUser, loading } = useAuth();
+  const { currentUser, userProfile, loading } = useAuth();
   
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -41,22 +39,18 @@ const Profile = () => {
 
   // Load user profile data
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && userProfile) {
       loadUserProfile();
     }
-  }, [currentUser]);
+  }, [currentUser, userProfile]);
 
   const loadUserProfile = async () => {
     try {
       setIsLoadingProfile(true);
       
-      const userDocRef = doc(db, 'users', currentUser!.uid);
-      const userDoc = await getDoc(userDocRef);
-
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        setEmail(userData.email || '');
-        setPhone(userData.phone || '');
+      if (userProfile) {
+        setEmail(userProfile.email || '');
+        setPhone(userProfile.phone || '');
       } else {
         // Set from auth user if profile doesn't exist yet
         setEmail(currentUser?.email || '');
@@ -88,13 +82,28 @@ const Profile = () => {
     setIsUpdatingProfile(true);
     
     try {
-      // Update profile in Firestore
-      const userDocRef = doc(db, 'users', currentUser!.uid);
-      await setDoc(userDocRef, {
-        email,
-        phone,
-        updated_at: new Date().toISOString(),
-      }, { merge: true });
+      // Update profile in Appwrite
+      if (userProfile) {
+        const profileResponse = await databases.listDocuments(
+          DATABASE_ID,
+          COLLECTIONS.USERS,
+          [`userId=="${currentUser!.$id}"`]
+        );
+        
+        if (profileResponse.documents.length > 0) {
+          const profile = profileResponse.documents[0];
+          await databases.updateDocument(
+            DATABASE_ID,
+            COLLECTIONS.USERS,
+            profile.$id,
+            {
+              email,
+              phone,
+              updated_at: new Date().toISOString(),
+            }
+          );
+        }
+      }
       
       toast({
         title: "Profile updated successfully",
@@ -131,9 +140,9 @@ const Profile = () => {
       return;
     }
 
-    if (newPassword.length < 6) {
+    if (newPassword.length < 8) {
       toast({
-        title: "Password must be at least 6 characters long",
+        title: "Password must be at least 8 characters long",
         variant: "destructive",
       });
       return;
@@ -142,10 +151,8 @@ const Profile = () => {
     setIsChangingPassword(true);
     
     try {
-      // Update password with Firebase
-      if (currentUser) {
-        await updatePassword(currentUser, newPassword);
-      }
+      // Update password with Appwrite
+      await account.updatePassword(newPassword, currentPassword);
       
       toast({
         title: "Password changed successfully",
