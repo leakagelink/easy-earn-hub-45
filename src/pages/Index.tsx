@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,7 @@ import FAQ from "@/components/FAQ";
 const Index = () => {
   const plans = [
     {
-      id: 1,
+      id: "1",
       name: "Plan 1",
       price: 1,
       dailyProfit: 120,
@@ -21,7 +20,7 @@ const Index = () => {
       totalIncome: 43800,
     },
     {
-      id: 2,
+      id: "2",
       name: "Plan 2",
       price: 1000,
       dailyProfit: 244,
@@ -29,7 +28,7 @@ const Index = () => {
       totalIncome: 89060,
     },
     {
-      id: 3,
+      id: "3",
       name: "Plan 3",
       price: 2000,
       dailyProfit: 504,
@@ -37,7 +36,7 @@ const Index = () => {
       totalIncome: 183960,
     },
     {
-      id: 4,
+      id: "4",
       name: "Plan 4",
       price: 3000,
       dailyProfit: 765,
@@ -46,7 +45,7 @@ const Index = () => {
       isPremium: true,
     },
     {
-      id: 5,
+      id: "5",
       name: "Plan 5",
       price: 5000,
       dailyProfit: 1288,
@@ -54,7 +53,7 @@ const Index = () => {
       totalIncome: 470120,
     },
     {
-      id: 6,
+      id: "6",
       name: "Plan 6",
       price: 6000,
       dailyProfit: 1622,
@@ -62,7 +61,7 @@ const Index = () => {
       totalIncome: 592030,
     },
     {
-      id: 7,
+      id: "7",
       name: "Plan 7",
       price: 7000,
       dailyProfit: 2100,
@@ -194,9 +193,9 @@ const Index = () => {
                   id={plan.id}
                   name={plan.name}
                   price={plan.price}
-                  dailyProfit={plan.dailyProfit}
-                  validityDays={plan.validityDays}
-                  totalIncome={plan.totalIncome}
+                  daily_profit={plan.dailyProfit}
+                  validity_days={plan.validityDays}
+                  total_income={plan.totalIncome}
                   isPremium={plan.isPremium}
                 />
               ))}
