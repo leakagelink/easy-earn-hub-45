@@ -3,33 +3,49 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, ArrowUpRight, Wallet, Database, CalendarCheck } from 'lucide-react';
-
-// Sample data - in a real app, this would come from an API
-const statsData = [
-  { title: "Total Users", value: "10,482", icon: Users, change: "+14.6%" },
-  { title: "Total Investment", value: "₹3.48CR", icon: Wallet, change: "+5.2%" },
-  { title: "Active Plans", value: "24", icon: Database, change: "+2" },
-  { title: "Success Rate", value: "99.8%", icon: ArrowUpRight, change: "+0.2%" },
-];
-
-// Sample transactions data
-const recentTransactions = [
-  { id: 1, user: "Rahul Sharma", type: "Deposit", amount: "₹25,000", status: "Completed", date: "2 hours ago" },
-  { id: 2, user: "Priya Patel", type: "Withdrawal", amount: "₹12,000", status: "Processing", date: "5 hours ago" },
-  { id: 3, user: "Amit Singh", type: "Investment", amount: "₹50,000", status: "Completed", date: "Yesterday" },
-  { id: 4, user: "Sneha Gupta", type: "Withdrawal", amount: "₹8,000", status: "Completed", date: "Yesterday" },
-  { id: 5, user: "Vikram Joshi", type: "Deposit", amount: "₹35,000", status: "Failed", date: "2 days ago" },
-];
-
-// Sample new users data
-const newUsers = [
-  { id: 1, name: "Deepak Kumar", email: "deepak@example.com", joinDate: "Today", status: "Active" },
-  { id: 2, name: "Anjali Desai", email: "anjali@example.com", joinDate: "Yesterday", status: "Pending" },
-  { id: 3, name: "Rajesh Khanna", email: "rajesh@example.com", joinDate: "Yesterday", status: "Active" },
-  { id: 4, name: "Neha Sharma", email: "neha@example.com", joinDate: "2 days ago", status: "Active" },
-];
+import { useAdminData } from '@/hooks/useAdminData';
 
 const AdminDashboard = () => {
+  const { stats, users, investments, transactions, withdrawals, isLoading } = useAdminData();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-easyearn-purple mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading admin data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const statsData = [
+    { 
+      title: "Total Users", 
+      value: stats.totalUsers.toString(), 
+      icon: Users, 
+      change: "+14.6%" 
+    },
+    { 
+      title: "Total Investment", 
+      value: `₹${(stats.totalInvestment / 100000).toFixed(1)}L`, 
+      icon: Wallet, 
+      change: "+5.2%" 
+    },
+    { 
+      title: "Active Plans", 
+      value: stats.activePlans.toString(), 
+      icon: Database, 
+      change: "+2" 
+    },
+    { 
+      title: "Total Withdrawals", 
+      value: `₹${(stats.totalWithdrawals / 100000).toFixed(1)}L`, 
+      icon: ArrowUpRight, 
+      change: "+0.2%" 
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col space-y-2">
@@ -64,7 +80,9 @@ const AdminDashboard = () => {
       <Tabs defaultValue="transactions" className="space-y-4">
         <TabsList>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
-          <TabsTrigger value="users">New Users</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="investments">Investments</TabsTrigger>
+          <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
         </TabsList>
 
         <TabsContent value="transactions" className="space-y-4">
@@ -72,7 +90,7 @@ const AdminDashboard = () => {
             <CardHeader>
               <CardTitle>Recent Transactions</CardTitle>
               <CardDescription>
-                Last 10 transactions on the platform
+                Latest transactions on the platform
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -88,30 +106,33 @@ const AdminDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {recentTransactions.map((tx) => (
+                    {transactions.length > 0 ? transactions.map((tx) => (
                       <tr key={tx.id} className="border-b hover:bg-muted/50">
-                        <td className="py-3 px-2">{tx.user}</td>
-                        <td className="py-3 px-2">{tx.type}</td>
-                        <td className="py-3 px-2 font-medium">{tx.amount}</td>
+                        <td className="py-3 px-2">{tx.user_email}</td>
+                        <td className="py-3 px-2 capitalize">{tx.type}</td>
+                        <td className="py-3 px-2 font-medium">₹{tx.amount}</td>
                         <td className="py-3 px-2">
                           <span className={`px-2 py-1 rounded-full text-xs ${
-                            tx.status === 'Completed' ? 'bg-green-100 text-green-800' : 
-                            tx.status === 'Processing' ? 'bg-blue-100 text-blue-800' : 
+                            tx.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                            tx.status === 'pending' ? 'bg-blue-100 text-blue-800' : 
                             'bg-red-100 text-red-800'
                           }`}>
                             {tx.status}
                           </span>
                         </td>
-                        <td className="py-3 px-2 text-muted-foreground">{tx.date}</td>
+                        <td className="py-3 px-2 text-muted-foreground">
+                          {new Date(tx.created_at).toLocaleDateString()}
+                        </td>
                       </tr>
-                    ))}
+                    )) : (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-gray-500">
+                          No transactions found
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
-              </div>
-              <div className="flex justify-center mt-4">
-                <button className="text-sm text-easyearn-purple font-medium hover:underline">
-                  View All Transactions
-                </button>
               </div>
             </CardContent>
           </Card>
@@ -120,9 +141,9 @@ const AdminDashboard = () => {
         <TabsContent value="users" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>New Users</CardTitle>
+              <CardTitle>All Users</CardTitle>
               <CardDescription>
-                Recently registered users on the platform
+                Registered users on the platform
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -130,35 +151,134 @@ const AdminDashboard = () => {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left py-3 px-2">Name</th>
                       <th className="text-left py-3 px-2">Email</th>
+                      <th className="text-left py-3 px-2">Phone</th>
                       <th className="text-left py-3 px-2">Joined</th>
-                      <th className="text-left py-3 px-2">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {newUsers.map((user) => (
+                    {users.length > 0 ? users.map((user) => (
                       <tr key={user.id} className="border-b hover:bg-muted/50">
-                        <td className="py-3 px-2 font-medium">{user.name}</td>
-                        <td className="py-3 px-2">{user.email}</td>
-                        <td className="py-3 px-2 text-muted-foreground">{user.joinDate}</td>
-                        <td className="py-3 px-2">
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            user.status === 'Active' ? 'bg-green-100 text-green-800' : 
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {user.status}
-                          </span>
+                        <td className="py-3 px-2 font-medium">{user.email}</td>
+                        <td className="py-3 px-2">{user.phone || 'N/A'}</td>
+                        <td className="py-3 px-2 text-muted-foreground">
+                          {new Date(user.created_at).toLocaleDateString()}
                         </td>
                       </tr>
-                    ))}
+                    )) : (
+                      <tr>
+                        <td colSpan={3} className="py-8 text-center text-gray-500">
+                          No users found
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
-              <div className="flex justify-center mt-4">
-                <button className="text-sm text-easyearn-purple font-medium hover:underline">
-                  View All Users
-                </button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="investments" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>User Investments</CardTitle>
+              <CardDescription>
+                All investment records
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-2">User</th>
+                      <th className="text-left py-3 px-2">Plan</th>
+                      <th className="text-left py-3 px-2">Amount</th>
+                      <th className="text-left py-3 px-2">Status</th>
+                      <th className="text-left py-3 px-2">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {investments.length > 0 ? investments.map((inv) => (
+                      <tr key={inv.id} className="border-b hover:bg-muted/50">
+                        <td className="py-3 px-2">{inv.user_email}</td>
+                        <td className="py-3 px-2">{inv.plan_name}</td>
+                        <td className="py-3 px-2 font-medium">₹{inv.amount}</td>
+                        <td className="py-3 px-2">
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            inv.status === 'active' ? 'bg-green-100 text-green-800' : 
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {inv.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-2 text-muted-foreground">
+                          {new Date(inv.purchase_date).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-gray-500">
+                          No investments found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="withdrawals" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Withdrawal Requests</CardTitle>
+              <CardDescription>
+                All withdrawal requests
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-2">User</th>
+                      <th className="text-left py-3 px-2">Amount</th>
+                      <th className="text-left py-3 px-2">Method</th>
+                      <th className="text-left py-3 px-2">Status</th>
+                      <th className="text-left py-3 px-2">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {withdrawals.length > 0 ? withdrawals.map((wd) => (
+                      <tr key={wd.id} className="border-b hover:bg-muted/50">
+                        <td className="py-3 px-2">{wd.user_email}</td>
+                        <td className="py-3 px-2 font-medium">₹{wd.amount}</td>
+                        <td className="py-3 px-2 capitalize">{wd.method}</td>
+                        <td className="py-3 px-2">
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            wd.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                            wd.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {wd.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-2 text-muted-foreground">
+                          {new Date(wd.created_at).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-gray-500">
+                          No withdrawals found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>
