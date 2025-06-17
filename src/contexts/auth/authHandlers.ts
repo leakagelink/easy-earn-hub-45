@@ -44,6 +44,10 @@ export const handleRegister = async (
     console.log('Email:', email);
     console.log('Phone:', phone);
     
+    // Get the current origin for redirect URL
+    const currentOrigin = window.location.origin;
+    console.log('Using redirect URL:', currentOrigin);
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -52,13 +56,17 @@ export const handleRegister = async (
           phone: phone,
           referral_code: referralCode || '',
         },
-        emailRedirectTo: `${window.location.origin}/`
+        emailRedirectTo: currentOrigin
       }
     });
     
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase signup error:', error);
+      throw error;
+    }
     
     console.log('Registration successful:', data.user?.email);
+    console.log('User needs to confirm email:', !data.session);
     
   } catch (error: any) {
     console.error('Registration error:', error);

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
@@ -79,17 +80,17 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         
         toast({
           title: "Registration successful",
-          description: "Your account has been created successfully!",
+          description: "Please check your email to confirm your account!",
         });
         
-        // If a plan was selected, go to payment
+        // If a plan was selected, go to payment after email confirmation
         if (selectedPlan) {
-          console.log('Redirecting to payment page with selected plan:', selectedPlan);
-          navigate('/payment');
-        } else {
-          console.log('Redirecting to invest page after registration');
-          navigate('/invest');
+          localStorage.setItem('selectedPlan', selectedPlan);
+          console.log('Plan saved for after email confirmation:', selectedPlan);
         }
+        
+        // Redirect to login page to ask user to check email
+        navigate('/login');
       }
     } catch (error: any) {
       console.error('Auth error:', error);

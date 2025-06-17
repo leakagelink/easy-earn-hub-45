@@ -15,5 +15,11 @@ export const getSupabaseErrorMessage = (errorMessage: string) => {
   if (errorMessage.includes('Too many requests')) {
     return 'Too many failed attempts. Please try again later.';
   }
+  if (errorMessage.includes('Failed to fetch')) {
+    return 'Network connection error. Please check your internet connection and try again.';
+  }
+  if (errorMessage.includes('fetch')) {
+    return 'Unable to connect to server. Please try again in a moment.';
+  }
   return errorMessage || 'An error occurred. Please try again.';
 };
