@@ -9,13 +9,15 @@ import { useToast } from "@/components/ui/use-toast";
 import { User, Mail, Phone, Key } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { useAuth } from "@/contexts/auth";
-import { account, databases, DATABASE_ID, COLLECTIONS } from '@/integrations/appwrite/client';
+import { useFirebaseAuth } from "@/contexts/auth/FirebaseAuthProvider";
+import { updatePassword, updateEmail } from 'firebase/auth';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { db } from '@/integrations/firebase/config';
 
 const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { currentUser, userProfile, loading } = useAuth();
+  const { currentUser, loading } = useFirebaseAuth();
   
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -39,22 +41,25 @@ const Profile = () => {
 
   // Load user profile data
   useEffect(() => {
-    if (currentUser && userProfile) {
+    if (currentUser) {
       loadUserProfile();
     }
-  }, [currentUser, userProfile]);
+  }, [currentUser]);
 
   const loadUserProfile = async () => {
     try {
       setIsLoadingProfile(true);
       
-      if (userProfile) {
-        setEmail(userProfile.email || '');
-        setPhone(userProfile.phone || '');
-      } else {
-        // Set from auth user if profile doesn't exist yet
-        setEmail(currentUser?.email || '');
-        setPhone('');
+      // Set email from Firebase auth user
+      setEmail(currentUser?.email || '');
+      
+      // Try to load additional profile data from Firestore
+      if (currentUser?.uid) {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setPhone(userData.phone || '');
+        }
       }
     } catch (error: any) {
       console.error('Error loading profile:', error);
@@ -71,9 +76,9 @@ const Profile = () => {
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !phone) {
+    if (!phone) {
       toast({
-        title: "All fields are required",
+        title: "Phone number is required",
         variant: "destructive",
       });
       return;
@@ -82,27 +87,12 @@ const Profile = () => {
     setIsUpdatingProfile(true);
     
     try {
-      // Update profile in Appwrite
-      if (userProfile) {
-        const profileResponse = await databases.listDocuments(
-          DATABASE_ID,
-          COLLECTIONS.USERS,
-          [`userId=="${currentUser!.$id}"`]
-        );
-        
-        if (profileResponse.documents.length > 0) {
-          const profile = profileResponse.documents[0];
-          await databases.updateDocument(
-            DATABASE_ID,
-            COLLECTIONS.USERS,
-            profile.$id,
-            {
-              email,
-              phone,
-              updated_at: new Date().toISOString(),
-            }
-          );
-        }
+      // Update profile in Firestore
+      if (currentUser?.uid) {
+        await updateDoc(doc(db, 'users', currentUser.uid), {
+          phone,
+          updatedAt: new Date().toISOString(),
+        });
       }
       
       toast({
@@ -124,7 +114,7 @@ const Profile = () => {
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!currentPassword || !newPassword || !confirmPassword) {
+    if (!newPassword || !confirmPassword) {
       toast({
         title: "All password fields are required",
         variant: "destructive",
@@ -140,9 +130,9 @@ const Profile = () => {
       return;
     }
 
-    if (newPassword.length < 8) {
+    if (newPassword.length < 6) {
       toast({
-        title: "Password must be at least 8 characters long",
+        title: "Password must be at least 6 characters long",
         variant: "destructive",
       });
       return;
@@ -151,21 +141,23 @@ const Profile = () => {
     setIsChangingPassword(true);
     
     try {
-      // Update password with Appwrite
-      await account.updatePassword(newPassword, currentPassword);
-      
-      toast({
-        title: "Password changed successfully",
-      });
-      
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      // Update password with Firebase
+      if (currentUser) {
+        await updatePassword(currentUser, newPassword);
+        
+        toast({
+          title: "Password changed successfully",
+        });
+        
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      }
     } catch (error: any) {
       console.error('Error changing password:', error);
       toast({
         title: "Error changing password",
-        description: error.message,
+        description: "आपको फिर से login करना पड़ सकता है।",
         variant: "destructive",
       });
     } finally {
@@ -256,17 +248,6 @@ const Profile = () => {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleChangePassword} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Current Password</Label>
-                  <Input
-                    id="currentPassword"
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="Enter current password"
-                  />
-                </div>
-                
                 <div className="space-y-2">
                   <Label htmlFor="newPassword">New Password</Label>
                   <Input
