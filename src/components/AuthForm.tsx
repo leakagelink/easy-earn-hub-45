@@ -31,6 +31,22 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const { validateForm } = useAuthFormValidator();
   const { login, register } = useAuth();
   
+  const getErrorMessage = (error: any) => {
+    if (error.message?.includes('Invalid login credentials')) {
+      return 'Invalid email or password. Please check your credentials and try again.';
+    }
+    if (error.message?.includes('User already registered')) {
+      return 'This email is already registered. Please use a different email or try logging in instead.';
+    }
+    if (error.message?.includes('Password should be at least 6 characters')) {
+      return 'Password should be at least 6 characters long.';
+    }
+    if (error.message?.includes('Invalid email')) {
+      return 'Please enter a valid email address.';
+    }
+    return error.message || 'Something went wrong. Please try again.';
+  };
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -84,7 +100,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         
         toast({
           title: "Registration successful!",
-          description: "Account created successfully. You can now log in.",
+          description: "Please check your email to confirm your account.",
         });
         
         // If a plan was selected, save it for after login
@@ -103,7 +119,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       console.error('Auth error:', error);
       
       let errorTitle = mode === 'login' ? "Login failed" : "Registration failed";
-      let errorDescription = error.message || "Something went wrong. Please try again.";
+      let errorDescription = getErrorMessage(error);
       
       toast({
         title: errorTitle,

@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/components/ui/use-toast';
-import { collection, addDoc, doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 
 const Payment = () => {
   const navigate = useNavigate();
@@ -39,32 +38,46 @@ const Payment = () => {
 
     try {
       // Check if user profile exists
-      const profileDoc = await getDoc(doc(db, 'profiles', currentUser.uid));
-      
-      if (!profileDoc.exists()) {
-        throw new Error('User profile not found');
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .single();
+
+      if (profileError && profileError.code !== 'PGRST116') {
+        throw new Error('Error checking user profile');
       }
 
       // Add investment to userInvestments collection
-      await addDoc(collection(db, 'userInvestments'), {
-        userId: currentUser.uid,
-        planId: selectedPlan.id,
-        planName: selectedPlan.name,
-        amount: selectedPlan.price,
-        dailyProfit: selectedPlan.dailyProfit,
-        status: 'active',
-        purchaseDate: new Date().toISOString(),
-        expiryDate: new Date(Date.now() + selectedPlan.validityDays * 24 * 60 * 60 * 1000).toISOString()
-      });
+      const { error: investmentError } = await supabase
+        .from('user_investments')
+        .insert({
+          user_id: currentUser.id,
+          plan_id: selectedPlan.id,
+          amount: selectedPlan.price,
+          status: 'active',
+          purchase_date: new Date().toISOString(),
+          expiry_date: new Date(Date.now() + selectedPlan.validityDays * 24 * 60 * 60 * 1000).toISOString()
+        });
+
+      if (investmentError) {
+        throw investmentError;
+      }
 
       // Add transaction record
-      await addDoc(collection(db, 'transactions'), {
-        userId: currentUser.uid,
-        type: 'recharge',
-        amount: selectedPlan.price,
-        status: 'completed',
-        createdAt: new Date().toISOString()
-      });
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: currentUser.id,
+          type: 'recharge',
+          amount: selectedPlan.price,
+          status: 'completed',
+          created_at: new Date().toISOString()
+        });
+
+      if (transactionError) {
+        throw transactionError;
+      }
 
       // Clear selected plan from localStorage
       localStorage.removeItem('selectedPlan');

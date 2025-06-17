@@ -26,6 +26,16 @@ const LoginForm: React.FC = () => {
     setShowPassword(!showPassword);
   };
   
+  const getErrorMessage = (error: any) => {
+    if (error.message?.includes('Invalid login credentials')) {
+      return 'Invalid email or password. Please check your credentials and try again.';
+    }
+    if (error.message?.includes('Email not confirmed')) {
+      return 'Please check your email and confirm your account before logging in.';
+    }
+    return error.message || 'Something went wrong. Please try again.';
+  };
+  
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -82,7 +92,7 @@ const LoginForm: React.FC = () => {
       console.error('Login error:', error);
       toast({
         title: "Login failed",
-        description: error.message || "Something went wrong. Please try again.",
+        description: getErrorMessage(error),
         variant: "destructive"
       });
     } finally {
