@@ -29,126 +29,72 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const navigate = useNavigate();
   const { login, register } = useAuth();
   
-  const validateForm = () => {
-    if (mode === 'login') {
-      if (loginMethod === 'email' && !email.trim()) {
-        toast({ title: "Email required", variant: "destructive" });
-        return false;
-      }
-      if (loginMethod === 'phone' && !phone.trim()) {
-        toast({ title: "Phone number required", variant: "destructive" });
-        return false;
-      }
-    } else {
-      if (!phone.trim()) {
-        toast({ title: "Phone number required", variant: "destructive" });
-        return false;
-      }
-      if (!email.trim()) {
-        toast({ title: "Email required", variant: "destructive" });
-        return false;
-      }
-      if (password !== confirmPassword) {
-        toast({ title: "Passwords do not match", variant: "destructive" });
-        return false;
-      }
-      if (password.length < 6) {
-        toast({ title: "Password must be at least 6 characters", variant: "destructive" });
-        return false;
-      }
-    }
-    
-    if (!password.trim()) {
-      toast({ title: "Password required", variant: "destructive" });
-      return false;
-    }
-    
-    return true;
-  };
-  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('Form submission:', { mode, loginMethod, email, phone });
+    console.log('Form submission:', { mode, email, phone });
     
-    if (!validateForm()) {
+    if (!password) {
+      toast({ title: "Password required", variant: "destructive" });
       return;
+    }
+    
+    if (mode === 'login') {
+      if (loginMethod === 'email' && !email) {
+        toast({ title: "Email required", variant: "destructive" });
+        return;
+      }
+      if (loginMethod === 'phone' && !phone) {
+        toast({ title: "Phone required", variant: "destructive" });
+        return;
+      }
+    } else {
+      if (!email || !phone) {
+        toast({ title: "All fields required", variant: "destructive" });
+        return;
+      }
+      if (password !== confirmPassword) {
+        toast({ title: "Passwords don't match", variant: "destructive" });
+        return;
+      }
     }
     
     setIsLoading(true);
     
     try {
       if (mode === 'login') {
-        const loginEmail = loginMethod === 'email' ? email.trim() : `${phone.trim()}@easyearn.com`;
-        console.log('Attempting login...');
-        
-        toast({
-          title: "Logging in...",
-          description: "Please wait",
-        });
-        
+        const loginEmail = loginMethod === 'email' ? email : `${phone}@easyearn.com`;
         await login(loginEmail, password);
         
-        toast({
-          title: "Success!",
-          description: "Login successful!",
-        });
-        
-        const selectedPlan = localStorage.getItem('selectedPlan');
-        if (selectedPlan) {
-          navigate('/payment');
-        } else {
-          navigate('/invest');
-        }
-        
+        toast({ title: "Login successful!" });
+        navigate(localStorage.getItem('selectedPlan') ? '/payment' : '/invest');
       } else {
-        console.log('Attempting registration...');
+        await register(email, password, phone, referralCode);
         
-        toast({
-          title: "Creating account...",
-          description: "Please wait",
+        toast({ 
+          title: "Registration successful!", 
+          description: "Check your email to verify account" 
         });
         
-        await register(email.trim(), password, phone.trim(), referralCode.trim());
-        
-        toast({
-          title: "Account Created!",
-          description: "Registration successful! Please check your email.",
-          duration: 6000,
-        });
-        
-        if (selectedPlan) {
-          localStorage.setItem('selectedPlan', selectedPlan);
-        }
-        
-        setEmail('');
-        setPhone('');
-        setPassword('');
-        setConfirmPassword('');
-        setReferralCode('');
-        
-        setTimeout(() => {
-          navigate('/login');
-        }, 2000);
+        if (selectedPlan) localStorage.setItem('selectedPlan', selectedPlan);
+        navigate('/login');
       }
-      
     } catch (error: any) {
       console.error('Auth error:', error);
       
-      const errorTitle = mode === 'login' ? "Login Failed" : "Registration Failed";
-      let errorMessage = error.message;
-      
+      let errorMessage = 'Something went wrong';
       if (error.message?.includes('Invalid login credentials')) {
         errorMessage = 'Wrong email or password';
       } else if (error.message?.includes('User already registered')) {
-        errorMessage = 'Email already registered. Try logging in.';
+        errorMessage = 'Email already exists';
+      } else if (error.message?.includes('fetch')) {
+        errorMessage = 'Network error - check connection';
       }
       
       toast({
-        title: errorTitle,
+        title: mode === 'login' ? "Login Failed" : "Registration Failed",
         description: errorMessage,
-        variant: "destructive",
-        duration: 6000,
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
@@ -194,19 +140,17 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
               id="confirmPassword"
               label="Confirm Password"
             />
-            
             <ReferralInput referralCode={referralCode} setReferralCode={setReferralCode} />
           </>
         )}
         
         <SubmitButton isLoading={isLoading} mode={mode} />
-        
         <AuthFooter mode={mode} />
       </form>
       
       <div className="mt-4 text-center">
-        <p className="text-xs text-green-600 font-medium">
-          ✅ Supabase connection optimized
+        <p className="text-xs text-blue-600 font-medium">
+          🔧 Fresh Supabase connection
         </p>
       </div>
     </div>

@@ -8,38 +8,11 @@ export interface AuthOperationsParams {
   setIsAdmin: (isAdmin: boolean) => void;
 }
 
-const clearAuthData = () => {
-  try {
-    const keysToRemove = [
-      'supabase.auth.token',
-      'sb-mmzzgesweeubscbwzaia-auth-token',
-      'selectedPlan'
-    ];
-    
-    keysToRemove.forEach(key => {
-      localStorage.removeItem(key);
-      sessionStorage.removeItem(key);
-    });
-    
-    Object.keys(localStorage).forEach(key => {
-      if (key.includes('supabase') || key.includes('sb-')) {
-        localStorage.removeItem(key);
-      }
-    });
-    
-    console.log('Auth data cleared');
-  } catch (error) {
-    console.error('Error clearing auth data:', error);
-  }
-};
-
 export const createAuthOperations = ({ setCurrentUser, setSession, setIsAdmin }: AuthOperationsParams) => {
   const login = async (email: string, password: string) => {
-    console.log('Starting login for:', email);
+    console.log('Login attempt:', email);
     
     try {
-      clearAuthData();
-      
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password: password
@@ -47,34 +20,28 @@ export const createAuthOperations = ({ setCurrentUser, setSession, setIsAdmin }:
 
       if (error) {
         console.error('Login error:', error);
-        throw new Error(error.message);
+        throw error;
       }
 
-      if (!data.user) {
-        throw new Error('No user returned from sign in');
-      }
-
-      console.log('Login successful:', data.user.email);
+      console.log('Login successful');
       return data;
     } catch (error: any) {
       console.error('Login failed:', error);
-      throw new Error(error.message || 'Login failed. Please try again.');
+      throw error;
     }
   };
 
   const register = async (email: string, password: string, phone: string, referralCode?: string) => {
-    console.log('Starting registration for:', email);
+    console.log('Registration attempt:', email);
     
     try {
-      clearAuthData();
-      
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password: password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
           data: {
-            phone: phone.trim().replace(/\D/g, ''),
+            phone: phone.trim(),
             referralCode: referralCode?.trim() || ''
           }
         }
@@ -82,38 +49,25 @@ export const createAuthOperations = ({ setCurrentUser, setSession, setIsAdmin }:
 
       if (error) {
         console.error('Registration error:', error);
-        throw new Error(error.message);
+        throw error;
       }
 
-      if (!data.user) {
-        throw new Error('No user returned from registration');
-      }
-
-      console.log('Registration successful:', data.user.email);
+      console.log('Registration successful');
       return data;
     } catch (error: any) {
       console.error('Registration failed:', error);
-      throw new Error(error.message || 'Registration failed. Please try again.');
+      throw error;
     }
   };
 
   const logout = async () => {
-    console.log('Starting logout...');
+    console.log('Logout...');
     try {
-      clearAuthData();
-      
       await supabase.auth.signOut();
-      
       setCurrentUser(null);
       setSession(null);
       setIsAdmin(false);
-      
-      console.log('Logout completed');
-      
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 100);
-      
+      window.location.href = '/';
     } catch (error) {
       console.error('Logout error:', error);
       setCurrentUser(null);
