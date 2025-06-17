@@ -5,15 +5,17 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/components/ui/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
 const Payment = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const { toast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const [transactionId, setTransactionId] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
@@ -34,65 +36,51 @@ const Payment = () => {
   const handlePayment = async () => {
     if (!currentUser || !selectedPlan) return;
 
+    if (!transactionId.trim()) {
+      toast({
+        title: "Transaction ID Required",
+        description: "Please enter the transaction ID/UTR after making the payment.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
-      // Check if user profile exists
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', currentUser.id)
-        .single();
+      // Create payment request for admin approval
+      const paymentRequest = {
+        id: Date.now().toString(),
+        userId: currentUser.id,
+        userName: currentUser.email?.split('@')[0] || 'User',
+        userEmail: currentUser.email,
+        planId: selectedPlan.id,
+        planName: selectedPlan.name,
+        amount: selectedPlan.price,
+        transactionId: transactionId.trim(),
+        date: new Date().toISOString(),
+        status: 'pending',
+        type: 'investment'
+      };
 
-      if (profileError && profileError.code !== 'PGRST116') {
-        throw new Error('Error checking user profile');
-      }
-
-      // Add investment to userInvestments collection
-      const { error: investmentError } = await supabase
-        .from('user_investments')
-        .insert({
-          user_id: currentUser.id,
-          plan_id: selectedPlan.id,
-          amount: selectedPlan.price,
-          status: 'active',
-          purchase_date: new Date().toISOString(),
-          expiry_date: new Date(Date.now() + selectedPlan.validityDays * 24 * 60 * 60 * 1000).toISOString()
-        });
-
-      if (investmentError) {
-        throw investmentError;
-      }
-
-      // Add transaction record
-      const { error: transactionError } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: currentUser.id,
-          type: 'recharge',
-          amount: selectedPlan.price,
-          status: 'completed',
-          created_at: new Date().toISOString()
-        });
-
-      if (transactionError) {
-        throw transactionError;
-      }
+      // Store payment request in localStorage for admin review
+      const existingRequests = JSON.parse(localStorage.getItem('paymentRequests') || '[]');
+      localStorage.setItem('paymentRequests', JSON.stringify([...existingRequests, paymentRequest]));
 
       // Clear selected plan from localStorage
       localStorage.removeItem('selectedPlan');
 
       toast({
-        title: "Payment Successful!",
-        description: `${selectedPlan.name} has been activated successfully.`,
+        title: "Payment Request Submitted!",
+        description: `Your payment request for ${selectedPlan.name} has been submitted for verification. You will be notified once approved.`,
       });
 
       navigate('/dashboard');
     } catch (error: any) {
-      console.error('Payment error:', error);
+      console.error('Payment submission error:', error);
       toast({
-        title: "Payment Failed",
-        description: error.message || "There was an error processing your payment. Please try again.",
+        title: "Submission Failed",
+        description: error.message || "There was an error submitting your payment request. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -162,6 +150,37 @@ const Payment = () => {
             </CardContent>
           </Card>
 
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Enter Transaction Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="transactionId">Transaction ID / UTR *</Label>
+                <Input
+                  id="transactionId"
+                  value={transactionId}
+                  onChange={(e) => setTransactionId(e.target.value)}
+                  placeholder="Enter transaction ID or UTR number"
+                  required
+                />
+                <p className="text-sm text-gray-500">
+                  * Please enter the transaction ID/UTR after completing the payment above
+                </p>
+              </div>
+              
+              <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200">
+                <h3 className="font-medium text-yellow-800 mb-2">Important Instructions</h3>
+                <ul className="text-sm text-yellow-700 space-y-1">
+                  <li>• Make the payment using the UPI ID or QR code above</li>
+                  <li>• Save the transaction ID/UTR from your payment app</li>
+                  <li>• Enter the transaction ID in the field below</li>
+                  <li>• Your plan will be activated after admin verification</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="flex gap-4">
             <Button 
               variant="outline" 
@@ -172,10 +191,10 @@ const Payment = () => {
             </Button>
             <Button 
               onClick={handlePayment}
-              disabled={isProcessing}
+              disabled={isProcessing || !transactionId.trim()}
               className="flex-1 bg-easyearn-purple hover:bg-easyearn-darkpurple"
             >
-              {isProcessing ? 'Processing...' : 'Confirm Payment'}
+              {isProcessing ? 'Processing...' : 'Submit Payment Request'}
             </Button>
           </div>
         </div>
