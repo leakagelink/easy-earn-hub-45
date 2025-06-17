@@ -1,7 +1,8 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { AuthContextType } from './types';
+import { AuthContextType, ExtendedUser, FallbackUser } from './types';
 import { cleanupAuthState, clearAllCookies } from '@/utils/authCleanup';
 import { registerUser, loginUser } from '@/services/authService';
 
@@ -16,8 +17,33 @@ export function useAuth() {
   return context;
 }
 
+// Helper function to create a fallback user compatible with Supabase User type
+const createFallbackUser = (userData: any): FallbackUser => {
+  return {
+    id: userData.id,
+    email: userData.email,
+    phone: userData.phone,
+    referralCode: userData.referralCode,
+    createdAt: userData.createdAt,
+    verified: userData.verified || false,
+    // Required Supabase User properties
+    app_metadata: {},
+    user_metadata: {
+      phone: userData.phone,
+      referralCode: userData.referralCode
+    },
+    aud: 'authenticated',
+    created_at: userData.createdAt,
+    email_confirmed_at: userData.verified ? userData.createdAt : undefined,
+    phone_confirmed_at: undefined,
+    last_sign_in_at: new Date().toISOString(),
+    role: 'authenticated',
+    updated_at: userData.createdAt
+  };
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<ExtendedUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -31,12 +57,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Handle both Supabase and fallback responses
       if (data.user) {
-        setCurrentUser(data.user);
-        // Only set session if it's a proper Supabase session
+        // If it's a Supabase user, use it directly
         if (data.session && 'access_token' in data.session) {
+          setCurrentUser(data.user);
           setSession(data.session);
         } else {
-          // For fallback users, keep session as null
+          // For fallback users, create a compatible user object
+          const fallbackUser = createFallbackUser(data.user);
+          setCurrentUser(fallbackUser);
           setSession(null);
         }
         
@@ -67,8 +95,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (data.session && 'access_token' in data.session) {
           setSession(data.session);
           setCurrentUser(data.user);
+        } else {
+          // For fallback users, create a compatible user object but don't set as current user
+          // Let them login after registration
+          console.log('Fallback user created, user should login');
         }
-        // If it's fallback user, don't set session but show success
       }
       
       return data;
@@ -147,7 +178,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             try {
               const userData = JSON.parse(fallbackUser);
               console.log('Found fallback user:', userData.email);
-              setCurrentUser(userData);
+              const compatibleUser = createFallbackUser(userData);
+              setCurrentUser(compatibleUser);
               setSession(null); // No session for fallback users
               setIsAdmin(userData.email === 'admin@easyearn.us');
             } catch (error) {
@@ -186,7 +218,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           try {
             const userData = JSON.parse(fallbackUser);
             console.log('Initial fallback user found:', userData.email);
-            setCurrentUser(userData);
+            const compatibleUser = createFallbackUser(userData);
+            setCurrentUser(compatibleUser);
             setSession(null);
             setIsAdmin(userData.email === 'admin@easyearn.us');
           } catch (error) {
