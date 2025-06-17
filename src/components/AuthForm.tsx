@@ -10,7 +10,6 @@ import PasswordInput from './auth/PasswordInput';
 import ReferralInput from './auth/ReferralInput';
 import SubmitButton from './auth/SubmitButton';
 import AuthFooter from './auth/AuthFooter';
-import { cleanupAuthState } from '@/utils/authCleanup';
 
 interface AuthFormProps {
   mode: 'login' | 'register';
@@ -29,34 +28,6 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { login, register } = useAuth();
-  
-  const getErrorMessage = (error: any) => {
-    console.log('Processing error:', error);
-    
-    // Network/Connection errors
-    if (error.message?.includes('Failed to fetch') || 
-        error.name === 'AuthRetryableFetchError' ||
-        error.message?.includes('fetch') ||
-        error.message?.includes('NetworkError')) {
-      return 'Internet connection check करें और फिर try करें।';
-    }
-    
-    // Auth-specific errors
-    if (error.message?.includes('Invalid login credentials')) {
-      return 'Email या password गलत है।';
-    }
-    if (error.message?.includes('User already registered')) {
-      return 'यह email पहले से registered है। Login करें।';
-    }
-    if (error.message?.includes('Password should be at least 6 characters')) {
-      return 'Password कम से कम 6 characters का होना चाहिए।';
-    }
-    if (error.message?.includes('Invalid email')) {
-      return 'सही email address डालें।';
-    }
-    
-    return error.message || 'कुछ गलत हुआ है। फिर से try करें।';
-  };
   
   const validateForm = () => {
     if (mode === 'login') {
@@ -103,9 +74,6 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     setIsLoading(true);
     
     try {
-      // Clear any existing auth state before proceeding
-      cleanupAuthState();
-      
       if (mode === 'login') {
         const loginEmail = loginMethod === 'email' ? email.trim() : `${phone.trim()}@easyearn.com`;
         console.log('Attempting login...');
@@ -113,7 +81,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         await login(loginEmail, password);
         
         toast({
-          title: "Login successful!",
+          title: "Login successful! ✅",
           description: "Welcome back!",
         });
         
@@ -133,13 +101,20 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         await register(email.trim(), password, phone.trim(), referralCode.trim());
         
         toast({
-          title: "Registration successful!",
-          description: "Account बन गया है। Login करें।",
+          title: "Registration successful! ✅",
+          description: "Account बन गया है। अब login करें।",
         });
         
         if (selectedPlan) {
           localStorage.setItem('selectedPlan', selectedPlan);
         }
+        
+        // Clear form
+        setEmail('');
+        setPhone('');
+        setPassword('');
+        setConfirmPassword('');
+        setReferralCode('');
         
         setTimeout(() => {
           navigate('/login');
@@ -149,12 +124,11 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     } catch (error: any) {
       console.error('Auth error:', error);
       
-      const errorTitle = mode === 'login' ? "Login failed" : "Registration failed";
-      const errorMessage = getErrorMessage(error);
+      const errorTitle = mode === 'login' ? "Login failed ❌" : "Registration failed ❌";
       
       toast({
         title: errorTitle,
-        description: errorMessage,
+        description: error.message,
         variant: "destructive"
       });
     } finally {
@@ -210,6 +184,13 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         
         <AuthFooter mode={mode} />
       </form>
+      
+      {/* Network status indicator */}
+      <div className="mt-4 text-center">
+        <p className="text-xs text-gray-500">
+          अगर problem persist करे तो internet connection check करें
+        </p>
+      </div>
     </div>
   );
 };

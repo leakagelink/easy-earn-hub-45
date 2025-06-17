@@ -11,8 +11,36 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    storage: localStorage
-  }
+    storage: localStorage,
+    flowType: 'pkce'
+  },
+  global: {
+    headers: {
+      'x-my-custom-header': 'easyearn-app',
+    },
+  },
+  db: {
+    schema: 'public',
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 2,
+    },
+  },
 })
 
 console.log('Supabase client created successfully');
+
+// Network connectivity check function
+export const checkNetworkConnectivity = async (): Promise<boolean> => {
+  try {
+    const response = await fetch(supabaseUrl + '/rest/v1/', {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(5000)
+    });
+    return response.ok;
+  } catch (error) {
+    console.error('Network connectivity check failed:', error);
+    return false;
+  }
+};

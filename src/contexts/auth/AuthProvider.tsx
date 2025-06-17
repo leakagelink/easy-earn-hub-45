@@ -4,6 +4,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthContextType } from './types';
 import { cleanupAuthState, clearAllCookies } from '@/utils/authCleanup';
+import { registerUser, loginUser, getErrorMessage } from '@/services/authService';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -25,83 +26,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   console.log('AuthProvider rendering with loading:', loading, 'currentUser:', currentUser?.email);
 
   const login = async (email: string, password: string) => {
-    console.log('Starting login process...');
-    
-    // Clean up before login
-    cleanupAuthState();
-    
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password: password
-      });
-
-      if (error) {
-        console.error('Login error:', error);
-        throw error;
-      }
-
-      console.log('Login successful');
+      // Clean up before login
+      cleanupAuthState();
+      
+      const data = await loginUser(email, password);
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login failed:', error);
       throw error;
     }
   };
 
   const register = async (email: string, password: string, phone: string, referralCode?: string) => {
-    console.log('Starting registration process...');
-    
-    // Clean up before registration
-    cleanupAuthState();
-    clearAllCookies();
-    
     try {
-      // Basic validation
-      if (!email || !password || !phone) {
-        throw new Error('सभी फील्ड भरना जरूरी है');
-      }
-
-      if (password.length < 6) {
-        throw new Error('Password कम से कम 6 characters का होना चाहिए');
-      }
-
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        throw new Error('सही email address डालें');
-      }
-
-      const cleanEmail = email.trim().toLowerCase();
-      const cleanPhone = phone.trim();
+      // Clean up before registration
+      cleanupAuthState();
+      clearAllCookies();
       
-      console.log('Attempting registration with cleaned data...');
-      
-      const { data, error } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password: password,
-        options: {
-          data: {
-            phone: cleanPhone,
-            referralCode: referralCode?.trim() || ''
-          }
-        }
-      });
-
-      if (error) {
-        console.error('Registration error:', error);
-        
-        // Handle specific errors
-        if (error.message?.includes('User already registered')) {
-          throw new Error('यह email पहले से registered है। Login करने की कोशिश करें।');
-        }
-        if (error.message?.includes('Invalid email')) {
-          throw new Error('सही email address डालें।');
-        }
-        
-        throw new Error(error.message || 'Registration में error आई है');
-      }
-
-      console.log('Registration successful');
+      const data = await registerUser(email, password, phone, referralCode);
       return data;
     } catch (error: any) {
       console.error('Registration failed:', error);
