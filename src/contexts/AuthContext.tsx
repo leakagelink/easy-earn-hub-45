@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   User, 
@@ -39,6 +38,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       console.log('Attempting login with email:', email);
+      console.log('Network status:', navigator.onLine ? 'Online' : 'Offline');
+      
       const result = await signInWithEmailAndPassword(auth, email, password);
       console.log('Login successful:', result.user.email);
       
@@ -51,15 +52,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return result;
     } catch (error: any) {
       console.error('Login error details:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      console.error('Network status during error:', navigator.onLine ? 'Online' : 'Offline');
       throw new Error(getFirebaseErrorMessage(error.code));
     }
   };
 
   const register = async (email: string, password: string, phone: string, referralCode?: string) => {
     try {
+      console.log('Starting registration process...');
+      console.log('Email:', email);
+      console.log('Phone:', phone);
+      console.log('Network status:', navigator.onLine ? 'Online' : 'Offline');
+      console.log('Auth object:', auth);
+      console.log('Auth app:', auth.app);
+      console.log('Auth config:', auth.config);
+      
+      // Check network connectivity first
+      if (!navigator.onLine) {
+        throw new Error('No internet connection. Please check your network and try again.');
+      }
+      
       console.log('Attempting registration with email:', email);
       const result = await createUserWithEmailAndPassword(auth, email, password);
       console.log('Registration successful:', result.user.email);
+      console.log('User UID:', result.user.uid);
       
       // Save additional user data to Firestore
       const userData = {
@@ -74,12 +92,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       
       console.log('Saving user data to Firestore:', userData);
-      await setDoc(doc(db, 'users', result.user.uid), userData);
-      console.log('User data saved successfully');
+      
+      try {
+        await setDoc(doc(db, 'users', result.user.uid), userData);
+        console.log('User data saved successfully to Firestore');
+      } catch (firestoreError) {
+        console.error('Firestore save error (non-critical):', firestoreError);
+        // Don't throw here as user is already created in Auth
+      }
 
       return result;
     } catch (error: any) {
       console.error('Registration error details:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      console.error('Error customData:', error.customData);
+      console.error('Network status during error:', navigator.onLine ? 'Online' : 'Offline');
+      console.error('Full error object:', JSON.stringify(error, null, 2));
+      
+      // Enhanced error handling
+      if (error.code === 'auth/network-request-failed') {
+        // Try to provide more specific network error information
+        throw new Error('Network connection failed. Please ensure you have a stable internet connection and try again. If the problem persists, try refreshing the page.');
+      }
+      
       throw new Error(getFirebaseErrorMessage(error.code));
     }
   };
@@ -121,8 +157,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    console.log('Setting up auth state listener...');
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log('Auth state changed:', user?.email || 'No user');
+      console.log('Auth state change timestamp:', new Date().toISOString());
       setCurrentUser(user);
       
       if (user) {
@@ -146,6 +184,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
+    // Log when the auth listener is set up
+    console.log('Auth state listener set up successfully');
+    
     return unsubscribe;
   }, []);
 
