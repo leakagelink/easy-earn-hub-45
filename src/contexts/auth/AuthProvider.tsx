@@ -35,33 +35,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    console.log('Setting up auth state listener...');
+    console.log('AuthProvider: Setting up auth state listener...');
     
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session:', session?.user?.email || 'No user');
-      setSession(session);
-      setCurrentUser(session?.user ?? null);
-      
-      if (session?.user) {
-        const userEmail = session.user.email || '';
-        const userName = session.user.user_metadata?.name || 'User';
-        const isAdminUser = checkIsAdmin(userEmail);
-        
-        setUserStorage(userEmail, userName, isAdminUser);
-        
-        if (isAdminUser) {
-          setIsAdmin(true);
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('AuthProvider: Error getting initial session:', error);
+        } else {
+          console.log('AuthProvider: Initial session:', session?.user?.email || 'No user');
+          setSession(session);
+          setCurrentUser(session?.user ?? null);
+          
+          if (session?.user) {
+            const userEmail = session.user.email || '';
+            const userName = session.user.user_metadata?.name || 'User';
+            const isAdminUser = checkIsAdmin(userEmail);
+            
+            setUserStorage(userEmail, userName, isAdminUser);
+            
+            if (isAdminUser) {
+              setIsAdmin(true);
+            }
+          }
         }
+      } catch (error) {
+        console.error('AuthProvider: Error in getInitialSession:', error);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
-    });
+    };
+
+    getInitialSession();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email || 'No user');
+        console.log('AuthProvider: Auth state changed:', event, session?.user?.email || 'No user');
         setSession(session);
         setCurrentUser(session?.user ?? null);
         
@@ -80,14 +91,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setIsAdmin(false);
         }
         
-        setLoading(false);
+        if (event === 'INITIAL_SESSION') {
+          setLoading(false);
+        }
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log('AuthProvider: Cleaning up auth listener');
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const value = {
+  const value: AuthContextType = {
     currentUser,
     session,
     login,
