@@ -3,7 +3,7 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
 import { Bitcoin } from 'lucide-react';
-import { useSupabaseAuth } from '@/contexts/auth/SupabaseAuthProvider';
+import { useAuth } from '@/contexts/auth';
 
 interface PlanCardProps {
   id: string;
@@ -25,7 +25,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
   isPremium = false,
 }) => {
   const navigate = useNavigate();
-  const { currentUser } = useSupabaseAuth();
+  const { currentUser } = useAuth();
 
   const handleChoosePlan = () => {
     console.log('Plan selection started for plan:', id);

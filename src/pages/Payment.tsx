@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,20 +51,23 @@ const Payment = () => {
         return;
       }
 
+      const planData = JSON.parse(selectedPlan);
+
       console.log('Submitting payment request with Firebase:', {
-        user_id: currentUser?.uid,
-        plan_id: selectedPlan,
-        transaction_id: transactionId,
-        payment_method: 'UPI',
-        amount: selectedPlan === '500' ? 500 : 1000,
+        userId: currentUser?.$id,
+        planId: planData.id,
+        transactionId: transactionId,
+        paymentMethod: 'UPI',
+        amount: planData.price,
       });
 
       const result = await firebaseService.purchasePlan({
-        user_id: currentUser?.uid,
-        plan_id: selectedPlan,
-        transaction_id: transactionId,
-        payment_method: 'UPI',
-        amount: selectedPlan === '500' ? 500 : 1000,
+        userId: currentUser?.$id,
+        planId: planData.id,
+        transactionId: transactionId,
+        paymentMethod: 'UPI',
+        amount: planData.price,
+        planName: planData.name
       });
 
       if (!result.success) {
@@ -74,7 +78,7 @@ const Payment = () => {
       console.log('Payment request submitted successfully:', result);
       toast({
         title: "Payment request submitted",
-        description: `Your payment request for Plan ${selectedPlan} has been submitted for verification.`,
+        description: `Your payment request for ${planData.name} has been submitted for verification.`,
       });
 
       localStorage.removeItem('selectedPlan');
