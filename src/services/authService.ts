@@ -85,6 +85,24 @@ export const validateRegistrationData = (email: string, password: string, phone:
   return null;
 };
 
+// Create admin fallback user for admin panel access
+export const createAdminFallbackUser = (email: string) => {
+  const userData = {
+    id: 'admin-' + Date.now().toString(),
+    email: email.trim().toLowerCase(),
+    phone: '+919876543210',
+    referralCode: 'ADMIN',
+    createdAt: new Date().toISOString(),
+    verified: true
+  };
+  
+  localStorage.setItem('currentUser', JSON.stringify(userData));
+  localStorage.setItem('isLoggedIn', 'true');
+  localStorage.setItem('isAdmin', 'true');
+  
+  return { user: userData, session: null };
+};
+
 // Fallback registration using localStorage (only as last resort)
 export const fallbackRegister = (email: string, password: string, phone: string, referralCode?: string) => {
   console.log('Using fallback registration as last resort...');
@@ -189,11 +207,38 @@ export const registerUser = async (email: string, password: string, phone: strin
 };
 
 export const loginUser = async (email: string, password: string) => {
-  console.log('Starting login process...');
+  console.log('Starting login process for:', email);
+  
+  const cleanEmail = email.trim().toLowerCase();
+  
+  // Special handling for admin login
+  if (cleanEmail === 'admin@easyearn.us' && password === 'Easy@123') {
+    console.log('Admin login attempt detected');
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: password
+      });
+
+      if (error) {
+        console.log('Supabase admin login failed, using fallback:', error.message);
+        // Create admin fallback user for admin panel access
+        return createAdminFallbackUser(cleanEmail);
+      }
+
+      console.log('Supabase admin login successful:', data.user?.email);
+      return data;
+    } catch (error: any) {
+      console.log('Supabase connection failed for admin, using fallback:', error.message);
+      // Create admin fallback user for admin panel access
+      return createAdminFallbackUser(cleanEmail);
+    }
+  }
   
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
+      email: cleanEmail,
       password: password
     });
 
@@ -202,7 +247,7 @@ export const loginUser = async (email: string, password: string) => {
       
       // Try fallback login only if Supabase fails
       const fallbackUsers = JSON.parse(localStorage.getItem('fallbackUsers') || '[]');
-      const user = fallbackUsers.find((u: any) => u.email === email.trim().toLowerCase());
+      const user = fallbackUsers.find((u: any) => u.email === cleanEmail);
       
       if (user) {
         console.log('Using fallback login for:', user.email);

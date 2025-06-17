@@ -52,10 +52,13 @@ export const createAuthOperations = ({ setCurrentUser, setSession, setIsAdmin }:
       if (data.user) {
         console.log('Registration successful, user created:', data.user.email);
         
+        // Always use createFallbackUser to ensure proper formatting
+        const userObject = 'access_token' in (data.session || {}) ? data.user : createFallbackUser(data.user);
+        
         // If it's a Supabase user (has session), set the session
         if (data.session && 'access_token' in data.session) {
           setSession(data.session);
-          setCurrentUser(data.user);
+          setCurrentUser(userObject);
         } else {
           // For fallback users, don't set as current user
           // Let them login after registration
