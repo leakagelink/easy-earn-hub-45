@@ -1,8 +1,9 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Bitcoin } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PlanCardProps {
   id: number;
@@ -23,6 +24,24 @@ const PlanCard: React.FC<PlanCardProps> = ({
   totalIncome,
   isPremium = false,
 }) => {
+  const navigate = useNavigate();
+  const { currentUser } = useAuth();
+
+  const handleChoosePlan = () => {
+    // Store selected plan in localStorage
+    localStorage.setItem('selectedPlan', JSON.stringify({
+      id, name, price, dailyProfit, validityDays, totalIncome
+    }));
+
+    if (currentUser) {
+      // User is logged in, go to payment page
+      navigate('/payment');
+    } else {
+      // User is not logged in, go to register page with plan ID
+      navigate(`/register?plan=${id}`);
+    }
+  };
+
   return (
     <div 
       className={`rounded-xl p-6 shadow-md relative ${
@@ -65,16 +84,14 @@ const PlanCard: React.FC<PlanCardProps> = ({
       </div>
       
       <Button 
-        asChild
+        onClick={handleChoosePlan}
         className={`w-full ${
           isPremium 
             ? 'bg-white text-easyearn-purple hover:bg-gray-100' 
             : 'bg-easyearn-purple text-white hover:bg-easyearn-darkpurple'
         }`}
       >
-        <Link to={`/register?plan=${id}`}>
-          Choose Plan
-        </Link>
+        Choose Plan
       </Button>
     </div>
   );

@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import BottomBar from "./components/BottomBar";
-import { useEffect } from "react";
+import { AuthProvider } from "./contexts/AuthContext";
 
 // Pages
 import Index from "./pages/Index";
@@ -20,6 +20,7 @@ import NotFound from "./pages/NotFound";
 import Invest from "./pages/Invest";
 import Admin from "./pages/Admin";
 import MaintenancePage from "./pages/MaintenancePage";
+import Payment from "./pages/Payment";
 
 // Admin pages
 import AdminUsers from "./pages/admin/AdminUsers";
@@ -53,38 +54,41 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <MaintenanceCheck>
-          <Routes>
-            {/* Redirect the root path to login page */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="/home" element={<Index />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/recharge" element={<Recharge />} />
-            <Route path="/withdraw" element={<Withdraw />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/invest" element={<Invest />} />
-            <Route path="/maintenance" element={<MaintenancePage />} />
-            
-            {/* Admin routes */}
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/admin/users" element={<AdminUsers />} />
-            <Route path="/admin/investments" element={<AdminInvestments />} />
-            <Route path="/admin/transactions" element={<AdminTransactions />} />
-            <Route path="/admin/withdrawals" element={<AdminWithdrawals />} />
-            <Route path="/admin/plans" element={<AdminPlans />} />
-            <Route path="/admin/security" element={<AdminSecurity />} />
-            <Route path="/admin/settings" element={<AdminSettings />} />
-            <Route path="/admin/reports" element={<AdminReports />} />
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <BottomBar />
-        </MaintenanceCheck>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <MaintenanceCheck>
+            <Routes>
+              {/* Redirect the root path to login page */}
+              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="/home" element={<Index />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/recharge" element={<Recharge />} />
+              <Route path="/withdraw" element={<Withdraw />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/invest" element={<Invest />} />
+              <Route path="/payment" element={<Payment />} />
+              <Route path="/maintenance" element={<MaintenancePage />} />
+              
+              {/* Admin routes */}
+              <Route path="/admin" element={<Admin />} />
+              <Route path="/admin/users" element={<AdminUsers />} />
+              <Route path="/admin/investments" element={<AdminInvestments />} />
+              <Route path="/admin/transactions" element={<AdminTransactions />} />
+              <Route path="/admin/withdrawals" element={<AdminWithdrawals />} />
+              <Route path="/admin/plans" element={<AdminPlans />} />
+              <Route path="/admin/security" element={<AdminSecurity />} />
+              <Route path="/admin/settings" element={<AdminSettings />} />
+              <Route path="/admin/reports" element={<AdminReports />} />
+              
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <BottomBar />
+          </MaintenanceCheck>
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

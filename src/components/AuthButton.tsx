@@ -2,29 +2,23 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
+import { useAuth } from '@/contexts/AuthContext';
 
 const AuthButton = () => {
-  // Check if user is logged in
-  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  const { currentUser, logout, isAdmin } = useAuth();
 
-  if (isLoggedIn) {
+  if (currentUser) {
     return (
       <div className="flex items-center">
-        <Link to="/dashboard">
+        <Link to={isAdmin ? "/admin" : "/dashboard"}>
           <Button variant="ghost" className="text-gray-700 hover:text-easyearn-purple">
-            Dashboard
+            {isAdmin ? "Admin Panel" : "Dashboard"}
           </Button>
         </Link>
         <Button 
           variant="outline" 
           className="border-easyearn-purple text-easyearn-purple hover:bg-easyearn-purple hover:text-white ml-2"
-          onClick={() => {
-            localStorage.removeItem('isLoggedIn');
-            localStorage.removeItem('userEmail');
-            localStorage.removeItem('userName');
-            localStorage.removeItem('userPhone');
-            window.location.href = '/login';
-          }}
+          onClick={logout}
         >
           Logout
         </Button>

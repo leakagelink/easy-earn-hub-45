@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from '@/contexts/AuthContext';
 import LoginOptions from './auth/LoginOptions';
 import PhoneInput from './auth/PhoneInput';
 import EmailInput from './auth/EmailInput';
@@ -28,8 +29,9 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { validateForm } = useAuthFormValidator();
+  const { login, register } = useAuth();
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const isValid = validateForm({
@@ -45,47 +47,48 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     
     setIsLoading(true);
     
-    // Simulate API request
-    setTimeout(() => {
+    try {
       if (mode === 'login') {
-        // Mock successful login
-        localStorage.setItem('isLoggedIn', 'true');
-        
-        if (loginMethod === 'email') {
-          localStorage.setItem('userEmail', email);
-        } else {
-          localStorage.setItem('userPhone', phone);
-        }
-        
-        localStorage.setItem('userName', 'User Name');
+        const loginEmail = loginMethod === 'email' ? email : `${phone}@easyearn.com`;
+        await login(loginEmail, password);
         
         toast({
           title: "Login successful",
           description: "Welcome back!",
         });
         
-        navigate('/dashboard');
-      } else {
-        // Mock successful registration
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('userEmail', email);
-        localStorage.setItem('userPhone', phone);
-        
-        // If a plan was selected, mock purchase
+        // Check if user was trying to buy a plan
+        const selectedPlan = localStorage.getItem('selectedPlan');
         if (selectedPlan) {
-          localStorage.setItem('userPlan', selectedPlan);
+          navigate('/payment');
+        } else {
+          navigate('/invest');
         }
+      } else {
+        await register(email, password, phone, referralCode);
         
         toast({
           title: "Registration successful",
           description: "Your account has been created",
         });
         
-        navigate('/dashboard');
+        // If a plan was selected, go to payment
+        if (selectedPlan) {
+          navigate('/payment');
+        } else {
+          navigate('/invest');
+        }
       }
-      
+    } catch (error: any) {
+      console.error('Auth error:', error);
+      toast({
+        title: mode === 'login' ? "Login failed" : "Registration failed",
+        description: error.message || "Something went wrong",
+        variant: "destructive"
+      });
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
   
   return (
