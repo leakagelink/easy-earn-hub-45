@@ -11,7 +11,27 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    storage: localStorage
+    storage: localStorage,
+    flowType: 'pkce'
+  },
+  global: {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
+    },
+    fetch: (url, options = {}) => {
+      console.log('Supabase fetch:', url);
+      return fetch(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+          'Access-Control-Allow-Origin': '*'
+        }
+      }).catch(error => {
+        console.error('Fetch error:', error);
+        throw new Error('Network connection failed. Please check your internet connection.');
+      });
+    }
   }
 })
 

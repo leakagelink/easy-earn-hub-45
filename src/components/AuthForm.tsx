@@ -94,13 +94,14 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         }
         
       } else {
-        console.log('Attempting registration with Supabase...');
+        console.log('Attempting registration...');
         
         await register(email.trim(), password, phone.trim(), referralCode.trim());
         
         toast({
           title: "Registration successful! ✅",
-          description: "Account बन गया है! अब आप login कर सकते हैं।",
+          description: "Account बन गया है! Please check your email to verify your account.",
+          duration: 5000,
         });
         
         if (selectedPlan) {
@@ -124,10 +125,16 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       const errorTitle = mode === 'login' ? "Login failed ❌" : "Registration failed ❌";
       
+      let errorMessage = error.message;
+      if (error.message?.includes('fetch') || error.message?.includes('network')) {
+        errorMessage = 'Internet connection problem है। कुछ देर बाद try करें या अपना connection check करें।';
+      }
+      
       toast({
         title: errorTitle,
-        description: error.message || 'कुछ गलत हुआ है। फिर से try करें।',
-        variant: "destructive"
+        description: errorMessage,
+        variant: "destructive",
+        duration: 5000,
       });
     } finally {
       setIsLoading(false);
@@ -185,7 +192,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       <div className="mt-4 text-center">
         <p className="text-xs text-green-600 font-medium">
-          ✅ Fully connected to Supabase - आपका data secure है!
+          ✅ Full Supabase integration active
         </p>
       </div>
     </div>

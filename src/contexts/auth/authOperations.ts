@@ -13,8 +13,12 @@ export const createAuthOperations = ({ setCurrentUser, setSession, setIsAdmin }:
     try {
       console.log('Attempting Supabase login for:', email);
       
-      // First sign out any existing session
-      await supabase.auth.signOut();
+      // Clear any existing session first
+      try {
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.log('Sign out error (ignoring):', err);
+      }
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
@@ -23,13 +27,16 @@ export const createAuthOperations = ({ setCurrentUser, setSession, setIsAdmin }:
 
       if (error) {
         console.error('Supabase login error:', error);
-        throw error;
+        throw new Error(error.message || 'Login failed');
       }
 
       console.log('Supabase login successful:', data.user?.email);
       return data;
     } catch (error: any) {
       console.error('Login failed:', error);
+      if (error.message?.includes('fetch')) {
+        throw new Error('Internet connection problem. Please check your connection and try again.');
+      }
       throw error;
     }
   };
@@ -38,14 +45,21 @@ export const createAuthOperations = ({ setCurrentUser, setSession, setIsAdmin }:
     try {
       console.log('Starting Supabase registration for:', email);
       
-      // First sign out any existing session
-      await supabase.auth.signOut();
+      // Clear any existing session first
+      try {
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.log('Sign out error (ignoring):', err);
+      }
+      
+      // Get current domain for redirect
+      const currentDomain = window.location.origin;
       
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password: password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${currentDomain}/`,
           data: {
             phone: phone.trim().replace(/\D/g, ''),
             referralCode: referralCode?.trim() || ''
@@ -55,13 +69,19 @@ export const createAuthOperations = ({ setCurrentUser, setSession, setIsAdmin }:
 
       if (error) {
         console.error('Supabase registration error:', error);
-        throw error;
+        if (error.message?.includes('fetch')) {
+          throw new Error('Internet connection problem. Please check your connection and try again.');
+        }
+        throw new Error(error.message || 'Registration failed');
       }
 
       console.log('Supabase registration successful:', data.user?.email);
       return data;
     } catch (error: any) {
       console.error('Registration failed:', error);
+      if (error.message?.includes('fetch')) {
+        throw new Error('Internet connection problem. Please check your connection and try again.');
+      }
       throw error;
     }
   };
