@@ -1,7 +1,7 @@
 
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getAuth, connectAuthEmulator } from 'firebase/auth';
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAKyGbIrXskKQl_quzBugAI3wsPTdAUGBg",
@@ -19,7 +19,18 @@ const app = initializeApp(firebaseConfig);
 // Initialize Firebase Authentication and get a reference to the service
 export const auth = getAuth(app);
 
+// Configure auth settings for better connectivity
+auth.settings = {
+  appVerificationDisabledForTesting: false
+};
+
 // Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
+
+// Enable persistence for better offline support
+import { enableNetwork } from 'firebase/firestore';
+enableNetwork(db).catch((error) => {
+  console.warn('Failed to enable Firestore network:', error);
+});
 
 export default app;

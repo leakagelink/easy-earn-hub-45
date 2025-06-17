@@ -6,6 +6,11 @@ export const getFirebaseErrorMessage = (errorCode: string) => {
     return 'An unexpected error occurred. Please try again.';
   }
   
+  // Handle network connectivity issues first
+  if (errorCode.includes('network') || errorCode.includes('fetch') || errorCode.includes('connection')) {
+    return 'Connection error. Please check your internet connection and try again. If the problem persists, the service may be temporarily unavailable.';
+  }
+  
   // Handle specific Firebase authentication errors
   switch (errorCode) {
     case 'auth/user-not-found':
@@ -34,9 +39,23 @@ export const getFirebaseErrorMessage = (errorCode: string) => {
       return 'This account has been disabled. Please contact support.';
     
     case 'auth/operation-not-allowed':
-      return 'Email/password accounts are not enabled. Please contact support.';
+      return 'Email/password registration is not enabled. Please contact support.';
+    
+    case 'auth/configuration-not-found':
+      return 'Firebase configuration error. Please contact support.';
+    
+    case 'auth/app-deleted':
+      return 'Application configuration error. Please contact support.';
+    
+    case 'auth/invalid-api-key':
+      return 'Invalid API configuration. Please contact support.';
     
     default:
+      // Handle fetch errors and other network issues
+      if (errorCode.includes('Failed to fetch') || errorCode.includes('TypeError')) {
+        return 'Unable to connect to authentication service. Please check your internet connection and try again.';
+      }
+      
       // Return a generic message for unknown errors
       return errorCode.includes('auth/') 
         ? 'Authentication error. Please try again or contact support if the problem persists.'

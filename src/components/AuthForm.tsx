@@ -36,11 +36,27 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     
     console.log('Form submission started:', { mode, loginMethod, email, phone });
     
-    // Check network connectivity
+    // Enhanced network connectivity check
     if (!navigator.onLine) {
       toast({
         title: "No Internet Connection",
         description: "Please check your network connection and try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Additional Firebase service availability check
+    try {
+      await fetch('https://identitytoolkit.googleapis.com/v1/projects', { 
+        method: 'HEAD',
+        mode: 'no-cors'
+      });
+    } catch (error) {
+      console.warn('Firebase service check failed:', error);
+      toast({
+        title: "Service Unavailable",
+        description: "Authentication service is temporarily unavailable. Please try again in a few moments.",
         variant: "destructive"
       });
       return;
@@ -94,13 +110,13 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         
         toast({
           title: "Registration successful!",
-          description: "Please check your email to confirm your account before logging in.",
+          description: "Account created successfully. You can now log in.",
         });
         
-        // If a plan was selected, save it for after email confirmation
+        // If a plan was selected, save it for after login
         if (selectedPlan) {
           localStorage.setItem('selectedPlan', selectedPlan);
-          console.log('Plan saved for after email confirmation:', selectedPlan);
+          console.log('Plan saved for after login:', selectedPlan);
         }
         
         // Small delay before redirect
@@ -112,9 +128,17 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     } catch (error: any) {
       console.error('Auth error:', error);
       
+      let errorTitle = mode === 'login' ? "Login failed" : "Registration failed";
+      let errorDescription = error.message || "Something went wrong. Please try again.";
+      
+      // Provide more specific guidance for common issues
+      if (error.message.includes('connection') || error.message.includes('network')) {
+        errorDescription += " If the problem persists, please check if you're behind a firewall or try again later.";
+      }
+      
       toast({
-        title: mode === 'login' ? "Login failed" : "Registration failed",
-        description: error.message || "Something went wrong. Please try again.",
+        title: errorTitle,
+        description: errorDescription,
         variant: "destructive"
       });
     } finally {

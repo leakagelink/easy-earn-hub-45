@@ -5,6 +5,25 @@ import { auth, db } from '@/lib/firebase';
 import { getFirebaseErrorMessage } from './errorUtils';
 import { setUserStorage, clearUserStorage, checkIsAdmin } from './storageUtils';
 
+// Add network connectivity check
+const checkNetworkConnectivity = async () => {
+  if (!navigator.onLine) {
+    throw new Error('No internet connection. Please check your network and try again.');
+  }
+  
+  // Additional connectivity check by trying to reach Firebase
+  try {
+    await fetch('https://www.gstatic.com/hostedimg/382a91be1ed04f9e_large', { 
+      method: 'HEAD',
+      mode: 'no-cors',
+      cache: 'no-cache'
+    });
+  } catch (error) {
+    console.warn('Network connectivity check failed:', error);
+    throw new Error('Connection issue detected. Please check your internet connection and try again.');
+  }
+};
+
 export const handleLogin = async (
   email: string, 
   password: string,
@@ -13,10 +32,8 @@ export const handleLogin = async (
   try {
     console.log('Starting login process for:', email);
     
-    // Check if we're online
-    if (!navigator.onLine) {
-      throw new Error('No internet connection. Please check your network and try again.');
-    }
+    // Check network connectivity
+    await checkNetworkConnectivity();
     
     console.log('Attempting login with Firebase...');
     const userCredential = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
@@ -40,7 +57,8 @@ export const handleLogin = async (
     
   } catch (error: any) {
     console.error('Login error details:', error);
-    throw new Error(getFirebaseErrorMessage(error.code || error.message));
+    const errorMessage = error.code || error.message || error.toString();
+    throw new Error(getFirebaseErrorMessage(errorMessage));
   }
 };
 
@@ -56,10 +74,8 @@ export const handleRegister = async (
     console.log('Phone:', phone);
     console.log('Referral Code:', referralCode);
     
-    // Check if we're online
-    if (!navigator.onLine) {
-      throw new Error('No internet connection. Please check your network and try again.');
-    }
+    // Check network connectivity first
+    await checkNetworkConnectivity();
     
     // Validate input
     if (!email || !password || !phone) {
@@ -76,8 +92,15 @@ export const handleRegister = async (
       throw new Error('Please enter a valid email address');
     }
     
-    console.log('Attempting registration with Firebase...');
-    const userCredential = await createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+    console.log('Network check passed, attempting registration with Firebase...');
+    
+    // Add timeout to the registration request
+    const registrationPromise = createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Registration timeout. Please try again.')), 30000)
+    );
+    
+    const userCredential = await Promise.race([registrationPromise, timeoutPromise]);
     const user = userCredential.user;
     
     if (user) {
@@ -103,7 +126,8 @@ export const handleRegister = async (
     
   } catch (error: any) {
     console.error('Registration error details:', error);
-    throw new Error(getFirebaseErrorMessage(error.code || error.message));
+    const errorMessage = error.code || error.message || error.toString();
+    throw new Error(getFirebaseErrorMessage(errorMessage));
   }
 };
 
