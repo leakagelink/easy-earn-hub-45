@@ -34,6 +34,8 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('Form submission started:', { mode, loginMethod, email, phone });
+    
     const isValid = validateForm({
       mode,
       loginMethod,
@@ -43,13 +45,18 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       confirmPassword
     });
     
-    if (!isValid) return;
+    if (!isValid) {
+      console.log('Form validation failed');
+      return;
+    }
     
     setIsLoading(true);
     
     try {
       if (mode === 'login') {
         const loginEmail = loginMethod === 'email' ? email : `${phone}@easyearn.com`;
+        console.log('Attempting login with email:', loginEmail);
+        
         await login(loginEmail, password);
         
         toast({
@@ -60,22 +67,28 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         // Check if user was trying to buy a plan
         const selectedPlan = localStorage.getItem('selectedPlan');
         if (selectedPlan) {
+          console.log('Redirecting to payment page with plan:', selectedPlan);
           navigate('/payment');
         } else {
+          console.log('Redirecting to invest page');
           navigate('/invest');
         }
       } else {
+        console.log('Attempting registration with:', { email, phone, referralCode });
+        
         await register(email, password, phone, referralCode);
         
         toast({
           title: "Registration successful",
-          description: "Your account has been created",
+          description: "Your account has been created successfully!",
         });
         
         // If a plan was selected, go to payment
         if (selectedPlan) {
+          console.log('Redirecting to payment page with selected plan:', selectedPlan);
           navigate('/payment');
         } else {
+          console.log('Redirecting to invest page after registration');
           navigate('/invest');
         }
       }
@@ -83,7 +96,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       console.error('Auth error:', error);
       toast({
         title: mode === 'login' ? "Login failed" : "Registration failed",
-        description: error.message || "Something went wrong",
+        description: error.message || "Something went wrong. Please try again.",
         variant: "destructive"
       });
     } finally {
