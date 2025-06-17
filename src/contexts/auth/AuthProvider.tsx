@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,7 +32,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Handle both Supabase and fallback responses
       if (data.user) {
         setCurrentUser(data.user);
-        setSession(data.session);
+        if (data.session) {
+          setSession(data.session);
+        }
         
         const userEmail = data.user.email || '';
         const isAdminUser = userEmail === 'admin@easyearn.us';
@@ -110,7 +111,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const userData = JSON.parse(currentUser);
           console.log('Found fallback user:', userData.email);
           setCurrentUser(userData);
-          setSession({ user: userData } as Session);
+          // Don't set session for fallback users - keep it null
+          setSession(null);
           setIsAdmin(userData.email === 'admin@easyearn.us');
         } catch (error) {
           console.error('Error parsing fallback user:', error);
