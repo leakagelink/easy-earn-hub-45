@@ -3,7 +3,6 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
 import { Bitcoin } from 'lucide-react';
-import { useAuth } from '@/contexts/auth';
 
 interface PlanCardProps {
   id: string;
@@ -25,7 +24,17 @@ const PlanCard: React.FC<PlanCardProps> = ({
   isPremium = false,
 }) => {
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  
+  // Safely access auth context with fallback
+  let currentUser = null;
+  try {
+    const { useAuth } = require('@/contexts/auth');
+    const auth = useAuth();
+    currentUser = auth.currentUser;
+  } catch (error) {
+    console.log('Auth context not available, treating user as not logged in');
+    currentUser = null;
+  }
 
   const handleChoosePlan = () => {
     // Store selected plan in localStorage
