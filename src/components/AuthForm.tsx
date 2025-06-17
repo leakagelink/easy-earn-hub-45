@@ -18,7 +18,7 @@ interface AuthFormProps {
 }
 
 const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
-  console.log('🔥 Supabase AuthForm rendering with mode:', mode);
+  console.log('🔥 AuthForm rendering with mode:', mode);
   
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -30,7 +30,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { login, register, networkStatus } = useSupabaseAuth();
+  const { login, register, networkStatus, isOfflineMode } = useSupabaseAuth();
   
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -98,24 +98,37 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
           localStorage.setItem('selectedPlan', selectedPlan);
         }
         
-        // Show success message and redirect to login
-        toast({
-          title: "✅ Registration Successful!",
-          description: "Account बन गया! Email verify करने के बाद login करें।",
-        });
-        
-        // Small delay then redirect to login
-        setTimeout(() => {
-          navigate('/login');
-        }, 2000);
+        // Show success message and redirect to dashboard if offline
+        if (isOfflineMode) {
+          toast({
+            title: "✅ Registration Successful! (Offline)",
+            description: "Account offline mode में बन गया! Dashboard पर जा रहे हैं।",
+          });
+          
+          setTimeout(() => {
+            navigate('/invest');
+          }, 2000);
+        } else {
+          toast({
+            title: "✅ Registration Successful!",
+            description: "Account बन गया! Email verify करने के बाद login करें।",
+          });
+          
+          setTimeout(() => {
+            navigate('/login');
+          }, 2000);
+        }
       }
     } catch (error: any) {
       console.error('💥 Auth error:', error);
       
+      // Don't show error as destructive if it's just offline mode
+      const isOfflineSuccess = error.message?.includes('offline') || error.message?.includes('Internet');
+      
       toast({
         title: mode === 'login' ? "❌ Login Failed" : "❌ Registration Failed",
         description: error.message || 'कुछ गलत हुआ है। फिर से कोशिश करें।',
-        variant: "destructive"
+        variant: isOfflineSuccess ? "default" : "destructive"
       });
     } finally {
       setIsLoading(false);
@@ -138,10 +151,18 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       <NetworkStatus />
       
-      {networkStatus && !networkStatus.supabase && (
+      {isOfflineMode && (
+        <div className="mb-4 p-3 bg-green-100 border border-green-300 rounded-md">
+          <p className="text-sm text-green-700 text-center">
+            ✅ आप offline mode में हैं। सब कुछ काम कर रहा है!
+          </p>
+        </div>
+      )}
+      
+      {networkStatus && !networkStatus.supabase && !isOfflineMode && (
         <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 rounded-md">
           <p className="text-sm text-yellow-700 text-center">
-            ⚠️ Server connection slow है। Registration में time लग सकता है।
+            ⚠️ Server connection slow है। Offline mode में registration होगी।
           </p>
         </div>
       )}
@@ -181,10 +202,10 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       <div className="mt-4 text-center">
         <p className="text-xs text-green-600 font-medium">
-          🔄 Enhanced Network & Auth System
+          🔄 Smart Offline Registration System
         </p>
         <p className="text-xs text-gray-500 mt-1">
-          Real-time connectivity monitoring with better error handling
+          {isOfflineMode ? 'Offline mode active - सब कुछ काम कर रहा है!' : 'Real-time connectivity with offline backup'}
         </p>
       </div>
     </div>
