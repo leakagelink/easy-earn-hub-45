@@ -46,39 +46,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('AuthProvider: Starting registration for:', email);
     
     try {
-      // Input validation
+      // Basic validation
       if (!email || !password || !phone) {
-        throw new Error('All required fields must be filled');
+        throw new Error('सभी फील्ड भरना जरूरी है');
       }
 
       if (password.length < 6) {
-        throw new Error('Password must be at least 6 characters long');
+        throw new Error('Password कम से कम 6 characters का होना चाहिए');
       }
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        throw new Error('Please enter a valid email address');
+        throw new Error('सही email address डालें');
       }
 
-      // Current domain for redirect
-      const redirectUrl = window.location.origin;
-      console.log('Registration redirect URL:', redirectUrl);
-      
-      // Clean email and phone
+      // Clean inputs
       const cleanEmail = email.trim().toLowerCase();
       const cleanPhone = phone.trim();
       
-      console.log('Attempting registration with cleaned data:', { 
-        email: cleanEmail, 
-        phone: cleanPhone,
-        redirectUrl 
-      });
+      console.log('Attempting registration...', { email: cleanEmail, phone: cleanPhone });
       
+      // Simplified registration - remove redirect URL and complex options
       const { data, error } = await supabase.auth.signUp({
         email: cleanEmail,
         password: password,
         options: {
-          emailRedirectTo: redirectUrl,
           data: {
             phone: cleanPhone,
             referralCode: referralCode?.trim() || ''
@@ -87,33 +79,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) {
-        console.error('Registration error details:', error);
+        console.error('Registration error:', error);
         
-        // Handle specific error messages
+        // Specific error handling
         if (error.message?.includes('User already registered')) {
-          throw new Error('This email is already registered. Please try logging in instead.');
+          throw new Error('यह email पहले से registered है। Login करने की कोशिश करें।');
         }
         if (error.message?.includes('Invalid email')) {
-          throw new Error('Please enter a valid email address.');
-        }
-        if (error.message?.includes('Password should be at least')) {
-          throw new Error('Password must be at least 6 characters long.');
-        }
-        if (error.message?.includes('Failed to fetch') || error.name === 'AuthRetryableFetchError') {
-          throw new Error('Unable to connect to server. Please check your internet connection and try again.');
+          throw new Error('सही email address डालें।');
         }
         
-        // If it's a network error, provide a clearer message
-        if (error.message?.includes('fetch')) {
-          throw new Error('Network error occurred. Please try again in a moment.');
-        }
-        
-        throw error;
+        throw new Error(error.message || 'Registration में error आई है');
       }
 
       console.log('AuthProvider: Registration successful', data);
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('AuthProvider: Registration failed:', error);
       throw error;
     }

@@ -34,33 +34,33 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const getErrorMessage = (error: any) => {
     console.log('Processing error in AuthForm:', error);
     
-    // Network/Connection errors - clearer messages
+    // Network/Connection errors - Hindi messages
     if (error.message?.includes('Failed to fetch') || 
         error.name === 'AuthRetryableFetchError' ||
-        error.message?.includes('Network connection error') ||
-        error.message?.includes('fetch')) {
-      return 'Unable to connect to server. Please check your internet connection and try again.';
+        error.message?.includes('fetch') ||
+        error.message?.includes('NetworkError')) {
+      return 'Server से connection नहीं हो पा रहा। Internet connection check करें।';
     }
     
-    // Auth-specific errors
+    // Auth-specific errors in Hindi
     if (error.message?.includes('Invalid login credentials')) {
-      return 'Invalid email or password. Please check your credentials and try again.';
+      return 'Email या password गलत है। फिर से try करें।';
     }
     if (error.message?.includes('User already registered')) {
-      return 'This email is already registered. Please use a different email or try logging in instead.';
+      return 'यह email पहले से registered है। Login करने की कोशिश करें।';
     }
     if (error.message?.includes('Password should be at least 6 characters')) {
-      return 'Password should be at least 6 characters long.';
+      return 'Password कम से कम 6 characters का होना चाहिए।';
     }
     if (error.message?.includes('Invalid email')) {
-      return 'Please enter a valid email address.';
+      return 'सही email address डालें।';
     }
     if (error.message?.includes('Email not confirmed')) {
-      return 'Please check your email and confirm your account before logging in.';
+      return 'Email confirm करने के लिए अपना email check करें।';
     }
     
-    // Return the original error message or a generic fallback
-    return error.message || 'Something went wrong. Please try again.';
+    // Return original or fallback
+    return error.message || 'कुछ गलत हुआ है। फिर से try करें।';
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,9 +96,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
           description: "Welcome back! Redirecting you now...",
         });
         
-        // Small delay to show success message
         setTimeout(() => {
-          // Check if user was trying to buy a plan
           const selectedPlan = localStorage.getItem('selectedPlan');
           if (selectedPlan) {
             console.log('AuthForm: Redirecting to payment page with plan:', selectedPlan);
@@ -110,12 +108,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         }, 1000);
         
       } else {
-        console.log('AuthForm: Attempting registration with data:', { 
-          email, 
-          phone, 
-          referralCode,
-          hasPassword: !!password 
-        });
+        console.log('AuthForm: Attempting registration...');
         
         const result = await register(email, password, phone, referralCode);
         
@@ -123,16 +116,14 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         
         toast({
           title: "Registration successful!",
-          description: "Please check your email to confirm your account.",
+          description: "अपना email check करें account confirm करने के लिए।",
         });
         
-        // If a plan was selected, save it for after login
         if (selectedPlan) {
           localStorage.setItem('selectedPlan', selectedPlan);
           console.log('AuthForm: Plan saved for after login:', selectedPlan);
         }
         
-        // Small delay before redirect
         setTimeout(() => {
           navigate('/login');
         }, 2000);
