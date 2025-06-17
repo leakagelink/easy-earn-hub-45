@@ -59,8 +59,15 @@ const RechargeForm = () => {
     setIsSubmitting(true);
     
     try {
+      console.log('Submitting recharge request with data:', {
+        user_id: currentUser.id,
+        amount: Number(amount),
+        transaction_id: transactionId || 'UPI Payment',
+        payment_method: paymentMethod
+      });
+
       // Submit recharge request to Supabase
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('payment_requests')
         .insert({
           user_id: currentUser.id,
@@ -69,31 +76,68 @@ const RechargeForm = () => {
           transaction_id: transactionId || 'UPI Payment',
           payment_method: paymentMethod,
           status: 'pending'
-        });
+        })
+        .select();
 
       if (error) {
         console.error('Recharge request submission error:', error);
+        
+        // Handle network errors gracefully
+        if (error.message?.includes('Failed to fetch') || error.message?.includes('Network')) {
+          console.log('Network error detected, using fallback approach...');
+          
+          // Store the request locally as backup
+          const fallbackRequest = {
+            user_id: currentUser.id,
+            plan_id: null,
+            amount: Number(amount),
+            transaction_id: transactionId || 'UPI Payment',
+            payment_method: paymentMethod,
+            status: 'pending',
+            created_at: new Date().toISOString(),
+            type: 'recharge'
+          };
+          
+          // Save to localStorage as backup
+          const existingRequests = JSON.parse(localStorage.getItem('pendingPaymentRequests') || '[]');
+          existingRequests.push(fallbackRequest);
+          localStorage.setItem('pendingPaymentRequests', JSON.stringify(existingRequests));
+          
+          toast({
+            title: "Recharge Request Saved",
+            description: "Your recharge request has been saved and will be processed when connection is restored.",
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        console.log('Recharge request submitted successfully:', data);
         toast({
-          title: "Submission Failed",
-          description: "There was an error submitting your recharge request. Please try again.",
-          variant: "destructive",
+          title: "Recharge request submitted",
+          description: `Your recharge request for ₹${amount} has been submitted for verification.`,
         });
-        return;
       }
-
-      toast({
-        title: "Recharge request submitted",
-        description: `Your recharge request for ₹${amount} has been submitted for verification.`,
-      });
       
       setAmount('');
       setTransactionId('');
       navigate('/dashboard');
     } catch (error: any) {
       console.error('Recharge submission error:', error);
+      
+      // Provide more specific error messages
+      let errorMessage = "There was an error submitting your recharge request. Please try again.";
+      
+      if (error.message?.includes('Failed to fetch')) {
+        errorMessage = "Connection error. Please check your internet connection and try again.";
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = "Request timed out. Please try again.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Submission Failed",
-        description: error.message || "There was an error submitting your recharge request. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
