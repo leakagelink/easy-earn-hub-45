@@ -1,5 +1,5 @@
 
-import { supabase, checkNetworkConnectivity } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface AuthError {
   message: string;
@@ -9,19 +9,7 @@ export interface AuthError {
 export const getErrorMessage = (error: any): AuthError => {
   console.log('Processing auth error:', error);
   
-  // Network/Connection errors
-  if (error.message?.includes('Failed to fetch') || 
-      error.name === 'AuthRetryableFetchError' ||
-      error.message?.includes('fetch') ||
-      error.message?.includes('NetworkError') ||
-      error.message?.includes('timeout')) {
-    return {
-      message: 'Internet connection check करें और फिर try करें।',
-      type: 'network'
-    };
-  }
-  
-  // Auth-specific errors
+  // Auth-specific errors - no network errors anymore
   if (error.message?.includes('Invalid login credentials')) {
     return {
       message: 'Email या password गलत है। फिर से try करें।',
@@ -100,13 +88,7 @@ export const validateRegistrationData = (email: string, password: string, phone:
 export const registerUser = async (email: string, password: string, phone: string, referralCode?: string) => {
   console.log('Starting registration process...');
   
-  // Check network connectivity first
-  const isConnected = await checkNetworkConnectivity();
-  if (!isConnected) {
-    throw new Error('Internet connection नहीं है। Connection check करें।');
-  }
-  
-  // Validate input data
+  // Remove network check - directly proceed to registration
   const validationError = validateRegistrationData(email, password, phone);
   if (validationError) {
     throw new Error(validationError.message);
@@ -125,8 +107,7 @@ export const registerUser = async (email: string, password: string, phone: strin
         data: {
           phone: cleanPhone,
           referralCode: referralCode?.trim() || ''
-        },
-        emailRedirectTo: `${window.location.origin}/login`
+        }
       }
     });
 
@@ -147,12 +128,7 @@ export const registerUser = async (email: string, password: string, phone: strin
 export const loginUser = async (email: string, password: string) => {
   console.log('Starting login process...');
   
-  // Check network connectivity first
-  const isConnected = await checkNetworkConnectivity();
-  if (!isConnected) {
-    throw new Error('Internet connection नहीं है। Connection check करें।');
-  }
-  
+  // Remove network check - directly proceed to login
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email.trim().toLowerCase(),
