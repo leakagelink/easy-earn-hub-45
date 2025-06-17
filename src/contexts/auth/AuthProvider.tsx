@@ -43,7 +43,7 @@ const convertFirebaseUser = (user: User | null): AuthContextType['currentUser'] 
     registration: user.metadata.creationTime || '',
     accessedAt: user.metadata.lastSignInTime || '',
     labels: [],
-    mfa: [],
+    mfa: false,
     targets: []
   };
 };
