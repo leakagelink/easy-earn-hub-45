@@ -24,29 +24,6 @@ export function useSupabaseAuth() {
   return context;
 }
 
-// Clean up auth state completely
-const cleanupAuthState = () => {
-  try {
-    // Clear all localStorage auth-related items
-    Object.keys(localStorage).forEach((key) => {
-      if (key.includes('supabase') || key.includes('sb-') || key.includes('auth')) {
-        localStorage.removeItem(key);
-      }
-    });
-    
-    // Clear sessionStorage if available
-    if (typeof sessionStorage !== 'undefined') {
-      Object.keys(sessionStorage).forEach((key) => {
-        if (key.includes('supabase') || key.includes('sb-') || key.includes('auth')) {
-          sessionStorage.removeItem(key);
-        }
-      });
-    }
-  } catch (error) {
-    console.log('Cleanup warning:', error);
-  }
-};
-
 export function SupabaseAuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -56,101 +33,97 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   const isAdmin = user?.email === 'admin@easyearn.us';
 
   useEffect(() => {
-    console.log('🔑 Setting up Supabase auth listener...');
+    console.log('🔑 Starting auth setup...');
     
-    // Set up auth state listener
+    // Get current session
+    const getSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Session error:', error);
+        } else {
+          console.log('Current session:', session?.user?.email || 'None');
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
+      } catch (error) {
+        console.error('Session fetch error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Set up auth listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('🔑 Auth state changed:', event, session?.user?.email);
+      async (event, session) => {
+        console.log('🔑 Auth event:', event, session?.user?.email || 'None');
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
-        
-        // Handle sign in success
-        if (event === 'SIGNED_IN' && session?.user) {
-          console.log('✅ User signed in successfully');
-        }
-        
-        // Handle sign out
-        if (event === 'SIGNED_OUT') {
-          console.log('🚪 User signed out');
-          setSession(null);
-          setUser(null);
-        }
       }
     );
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('🔑 Initial session:', session?.user?.email);
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    getSession();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
-    console.log('🔑 Login attempt for:', email);
+    console.log('🔑 Login attempt:', email);
     
     try {
-      // Clean up any existing state
-      cleanupAuthState();
-      
-      // Sign out any existing session
-      await supabase.auth.signOut();
+      setLoading(true);
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
-        password,
+        password: password.trim(),
       });
 
       if (error) {
         console.error('❌ Login error:', error);
-        throw error;
+        throw new Error(getErrorMessage(error));
       }
 
       if (data.user) {
-        console.log('✅ Login successful');
+        console.log('✅ Login successful:', data.user.email);
         toast({
           title: "✅ Login successful!",
-          description: "Welcome back!",
+          description: "आपका login हो गया है।",
         });
       }
 
     } catch (error: any) {
       console.error('💥 Login failed:', error);
-      throw new Error(getErrorMessage(error));
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
   const register = async (email: string, password: string, phone: string, referralCode?: string) => {
-    console.log('📝 Registration attempt for:', email);
+    console.log('📝 Registration attempt:', email);
     
     try {
-      // Clean up any existing state first
-      cleanupAuthState();
+      setLoading(true);
       
-      // Sign out any existing session
-      await supabase.auth.signOut();
-      
-      // Validate inputs
-      if (!email || !email.includes('@')) {
-        throw new Error('Valid email address required');
+      // Basic validation
+      if (!email.includes('@')) {
+        throw new Error('सही email address डालें।');
       }
       
-      if (!password || password.length < 6) {
-        throw new Error('Password must be at least 6 characters');
+      if (password.length < 6) {
+        throw new Error('Password कम से कम 6 characters का होना चाहिए।');
       }
       
-      if (!phone || phone.length < 10) {
-        throw new Error('Valid phone number required');
+      if (phone.length < 10) {
+        throw new Error('सही phone number डालें।');
       }
 
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
-        password,
+        password: password.trim(),
         options: {
           data: {
             phone: phone.trim(),
@@ -161,21 +134,22 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
 
       if (error) {
         console.error('❌ Registration error:', error);
-        throw error;
+        throw new Error(getErrorMessage(error));
       }
 
       if (data.user) {
-        console.log('✅ Registration successful');
-        
+        console.log('✅ Registration successful:', data.user.email);
         toast({
           title: "✅ Registration successful!",
-          description: "Account created successfully! You can now login.",
+          description: "Account बन गया है! अब login करें।",
         });
       }
 
     } catch (error: any) {
       console.error('💥 Registration failed:', error);
-      throw new Error(getErrorMessage(error));
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -183,22 +157,28 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     console.log('🚪 Logout...');
     
     try {
-      cleanupAuthState();
+      setLoading(true);
       const { error } = await supabase.auth.signOut();
       
       if (error) {
         console.error('Logout error:', error);
       }
       
-      // Force page refresh for clean state
+      // Clear state
+      setUser(null);
+      setSession(null);
+      
+      // Redirect to home
       window.location.href = '/';
       
     } catch (error: any) {
       console.error('💥 Logout failed:', error);
-      // Force cleanup even if signOut fails
+      // Force cleanup
       setUser(null);
       setSession(null);
       window.location.href = '/';
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -224,54 +204,26 @@ const getErrorMessage = (error: any): string => {
   
   const message = error.message || error.toString();
   
-  console.log('🔍 Error details:', { message, error });
-  
-  // Network errors
-  if (message.includes('Failed to fetch') || message.includes('Network request failed')) {
-    return 'इंटरनेट connection check करें और फिर कोशिश करें।';
-  }
-  
-  // Authentication errors
+  // Common error translations
   if (message.includes('Invalid login credentials')) {
     return 'गलत email या password है।';
   }
   
-  if (message.includes('Email not confirmed')) {
-    return 'Registration successful! अब login कर सकते हैं।';
-  }
-  
-  if (message.includes('User already registered') || message.includes('already registered')) {
+  if (message.includes('User already registered')) {
     return 'यह email पहले से registered है। Login करें।';
   }
   
-  if (message.includes('Password should be at least')) {
-    return 'Password कम से कम 6 characters का होना चाहिए।';
+  if (message.includes('Email not confirmed')) {
+    return 'Account बन गया है! अब login कर सकते हैं।';
   }
   
-  if (message.includes('Invalid email')) {
-    return 'सही email address डालें।';
-  }
-
   if (message.includes('signup is disabled')) {
-    return 'Registration बंद है। Admin से contact करें।';
+    return 'Registration temporarily बंद है।';
   }
   
-  if (message.includes('rate limit') || message.includes('too many')) {
-    return 'बहुत जल्दी try कर रहे हैं। 5 मिनट बाद कोशिश करें।';
+  if (message.includes('rate limit')) {
+    return 'बहुत जल्दी try कर रहे हैं। 2 मिनट बाद कोशिश करें।';
   }
   
-  // Validation errors
-  if (message.includes('Valid email address required')) {
-    return 'सही email address डालें।';
-  }
-  
-  if (message.includes('Password must be at least 6 characters')) {
-    return 'Password कम से कम 6 characters का होना चाहिए।';
-  }
-  
-  if (message.includes('Valid phone number required')) {
-    return 'सही phone number डालें।';
-  }
-  
-  return 'Registration में कोई समस्या है। फिर से कोशिश करें।';
+  return 'Registration में समस्या है। फिर से कोशिश करें।';
 }
