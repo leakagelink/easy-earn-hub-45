@@ -4,7 +4,6 @@ export interface NetworkStatus {
   connectionType: string;
   latency: number;
   canReachGoogle: boolean;
-  canReachAppwrite: boolean;
 }
 
 export const checkNetworkStatus = async (): Promise<NetworkStatus> => {
@@ -12,8 +11,7 @@ export const checkNetworkStatus = async (): Promise<NetworkStatus> => {
     isOnline: navigator.onLine,
     connectionType: (navigator as any).connection?.effectiveType || 'unknown',
     latency: 0,
-    canReachGoogle: false,
-    canReachAppwrite: false
+    canReachGoogle: false
   };
 
   // Test latency with Google
@@ -27,17 +25,6 @@ export const checkNetworkStatus = async (): Promise<NetworkStatus> => {
     status.canReachGoogle = true;
   } catch (error) {
     console.log('Cannot reach Google:', error);
-  }
-
-  // Test Appwrite connectivity
-  try {
-    await fetch('https://fra.cloud.appwrite.io/v1/health', {
-      method: 'GET',
-      cache: 'no-cache'
-    });
-    status.canReachAppwrite = true;
-  } catch (error) {
-    console.log('Cannot reach Appwrite:', error);
   }
 
   return status;

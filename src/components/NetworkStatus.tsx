@@ -63,12 +63,12 @@ const NetworkStatus: React.FC = () => {
     );
   }
 
-  if (!networkStatus.canReachAppwrite) {
+  if (!networkStatus.canReachGoogle) {
     return (
       <Alert variant="destructive" className="mb-4">
         <Wifi className="h-4 w-4" />
         <AlertDescription className="flex items-center justify-between">
-          <span>Server connection की समस्या है। Offline mode में काम कर रहे हैं।</span>
+          <span>Internet connection की समस्या है। Page reload करें।</span>
           <Button 
             variant="outline" 
             size="sm" 
