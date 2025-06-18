@@ -11,7 +11,7 @@ export function useAuth() {
     // Direct fallback to Supabase auth
     const supabaseAuth = useSupabaseAuth();
     return {
-      currentUser: convertSupabaseUser(supabaseAuth.currentUser),
+      currentUser: supabaseAuth.currentUser,
       login: supabaseAuth.login,
       logout: supabaseAuth.logout,
       register: supabaseAuth.register,
@@ -23,36 +23,12 @@ export function useAuth() {
   return context;
 }
 
-// Convert Supabase User to ExtendedUser format
-const convertSupabaseUser = (user: any): AuthContextType['currentUser'] => {
-  if (!user) return null;
-  
-  return {
-    $id: user.id,
-    $createdAt: user.created_at || '',
-    $updatedAt: user.updated_at || '',
-    name: user.user_metadata?.name || '',
-    email: user.email || '',
-    phone: user.user_metadata?.phone || '',
-    emailVerification: user.email_confirmed_at ? true : false,
-    phoneVerification: false,
-    prefs: {},
-    status: true,
-    passwordUpdate: '',
-    registration: user.created_at || '',
-    accessedAt: user.last_sign_in_at || '',
-    labels: [],
-    mfa: false,
-    targets: []
-  };
-};
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabaseAuth = useSupabaseAuth();
   
-  // Convert Supabase auth to match AuthContextType interface
+  // Use Supabase auth directly without conversion
   const value: AuthContextType = {
-    currentUser: convertSupabaseUser(supabaseAuth.currentUser),
+    currentUser: supabaseAuth.currentUser,
     login: supabaseAuth.login,
     logout: supabaseAuth.logout,
     register: supabaseAuth.register,

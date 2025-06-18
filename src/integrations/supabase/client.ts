@@ -20,11 +20,6 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
       'Content-Type': 'application/json',
       'Accept': 'application/json'
     }
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 5
-    }
   }
 });
 

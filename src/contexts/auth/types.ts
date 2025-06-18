@@ -1,19 +1,17 @@
 
-import { Models } from 'appwrite';
+import { User } from '@supabase/supabase-js';
 
-// Appwrite User type
-export type ExtendedUser = Models.User<any>;
+// Supabase User type
+export type ExtendedUser = User;
 
 // User profile type for database
 export interface UserProfile {
-  userId: string;
+  id: string;
   email: string;
   phone?: string;
-  referralCode?: string;
-  verified: boolean;
-  isAdmin: boolean;
-  createdAt: string;
-  lastLoginAt?: string;
+  referral_code?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface AuthContextType {

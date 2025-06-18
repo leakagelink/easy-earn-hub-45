@@ -40,10 +40,10 @@ export const testNetworkQuality = async (): Promise<NetworkTestResult> => {
       
       // Now test Supabase specifically
       try {
-        const supabaseResponse = await fetch('https://mmzzgesweeubscbwzaia.supabase.co/rest/v1/', {
+        const supabaseResponse = await fetch('https://umujwqxhlhbcchorzfaa.supabase.co/rest/v1/', {
           method: 'HEAD',
           headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1tenpnZXN3ZWV1YnNjYnd6YWlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxNTQ5NDQsImV4cCI6MjA2NTczMDk0NH0.V2cQJhwOwh_EbwChBk-L0TAwLNYulXH0un4cjdargfU'
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtdWp3cXhobGhiY2Nob3J6ZmFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyMjQwNzIsImV4cCI6MjA2NTgwMDA3Mn0.iCWNFYyhpodvgrFCk9iTg7J8j-CRhVGLUJX9mWdfl9M'
           },
           mode: 'cors',
         });
