@@ -6,38 +6,57 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://umujwqxhlhbcchorzfaa.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtdWp3cXhobGhiY2Nob3J6ZmFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyMjQwNzIsImV4cCI6MjA2NTgwMDA3Mn0.iCWNFYyhpodvgrFCk9iTg7J8j-CRhVGLUJX9mWdfl9M";
 
-// Enhanced Supabase client configuration for better connection reliability
+// Clean, simple Supabase client configuration
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: true,
     flowType: 'pkce'
   },
   global: {
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
     }
   },
   realtime: {
     params: {
-      eventsPerSecond: 10
+      eventsPerSecond: 5
     }
   }
 });
 
-// Add connection health check utility
-export const checkSupabaseConnection = async () => {
+// Simple connection test utility
+export const testConnection = async () => {
   try {
     console.log('🔍 Testing Supabase connection...');
     const { data, error } = await supabase.auth.getSession();
-    console.log('✅ Supabase connection successful:', !!data);
-    return { success: true, error: null };
+    if (error) {
+      console.error('❌ Connection test failed:', error);
+      return { success: false, error: error.message };
+    }
+    console.log('✅ Supabase connection successful');
+    return { success: true };
   } catch (error: any) {
-    console.error('❌ Supabase connection failed:', error);
+    console.error('💥 Connection test error:', error);
     return { success: false, error: error.message };
   }
 };
 
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
+// Clean auth state utility
+export const cleanAuthState = () => {
+  try {
+    console.log('🧹 Cleaning auth state...');
+    // Clear all Supabase auth keys
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('sb-') || key.includes('supabase.auth')) {
+        localStorage.removeItem(key);
+      }
+    });
+    console.log('✅ Auth state cleaned');
+  } catch (error) {
+    console.error('❌ Error cleaning auth state:', error);
+  }
+};

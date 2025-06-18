@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, cleanAuthState } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 
 export interface SupabaseAuthContextType {
@@ -35,7 +35,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     console.log('🔑 Setting up Supabase auth...');
     
-    // Set up auth listener FIRST
+    // Set up auth listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('🔑 Auth event:', event, session?.user?.email || 'None');
@@ -45,7 +45,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
       }
     );
 
-    // THEN get current session
+    // Get current session
     const getSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -76,6 +76,9 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     try {
       setLoading(true);
       
+      // Clean state before login
+      cleanAuthState();
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password: password.trim(),
@@ -104,19 +107,9 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     try {
       setLoading(true);
       
-      // Enhanced validation
-      if (!email.includes('@')) {
-        throw new Error('सही email address डालें।');
-      }
+      // Clean state before registration
+      cleanAuthState();
       
-      if (password.length < 6) {
-        throw new Error('Password कम से कम 6 characters का होना चाहिए।');
-      }
-      
-      if (phone.length < 10) {
-        throw new Error('सही phone number डालें।');
-      }
-
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password: password.trim(),
@@ -136,11 +129,6 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
 
       if (data.user) {
         console.log('✅ Registration successful for:', data.user.email);
-        
-        // Check if email confirmation is required
-        if (!data.session) {
-          console.log('📧 Email confirmation may be required');
-        }
       }
 
     } catch (error: any) {
@@ -156,6 +144,10 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     
     try {
       setLoading(true);
+      
+      // Clean state first
+      cleanAuthState();
+      
       const { error } = await supabase.auth.signOut();
       
       if (error) {

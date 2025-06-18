@@ -1,11 +1,10 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, cleanAuthState } from '@/integrations/supabase/client';
 
 export interface AuthResult {
   success: boolean;
   error?: string;
   needsRetry?: boolean;
-  networkIssue?: boolean;
 }
 
 export const enhancedRegister = async (
@@ -15,15 +14,12 @@ export const enhancedRegister = async (
   referralCode?: string
 ): Promise<AuthResult> => {
   try {
-    console.log('📝 Enhanced registration starting:', { email, phone, referralCode });
+    console.log('📝 Starting registration:', { email, phone });
     
-    // First, clean up any existing session
-    try {
-      await supabase.auth.signOut();
-    } catch (cleanupError) {
-      console.log('🧹 Session cleanup (expected if no session):', cleanupError);
-    }
+    // Clean state before registration
+    cleanAuthState();
     
+    // Simple signup without complex metadata
     const { data, error } = await supabase.auth.signUp({
       email: email.trim().toLowerCase(),
       password: password.trim(),
@@ -39,60 +35,46 @@ export const enhancedRegister = async (
     if (error) {
       console.error('❌ Registration error:', error);
       
-      // Handle specific error types
-      if (error.message.includes('fetch')) {
-        return {
-          success: false,
-          error: 'Network connection की समस्या है। Internet check करें।',
-          needsRetry: true,
-          networkIssue: true
-        };
-      }
-      
       if (error.message.includes('User already registered')) {
         return {
           success: false,
-          error: 'यह email already registered है। Login करें।',
-          needsRetry: false
+          error: 'यह email already registered है। Login करें।'
+        };
+      }
+      
+      if (error.message.includes('Invalid email')) {
+        return {
+          success: false,
+          error: 'Email address सही नहीं है।'
         };
       }
       
       return {
         success: false,
-        error: error.message,
+        error: `Registration failed: ${error.message}`,
         needsRetry: true
       };
     }
 
     if (data.user) {
       console.log('✅ Registration successful:', data.user.email);
-      
-      if (!data.session) {
-        console.log('📧 Email verification required');
-        return {
-          success: true,
-          error: 'Registration successful! Please check your email for verification.'
-        };
-      }
-      
       return { success: true };
     }
 
     return {
       success: false,
-      error: 'Unexpected registration issue occurred.',
+      error: 'Registration completed but no user data received',
       needsRetry: true
     };
 
   } catch (error: any) {
     console.error('💥 Registration failed:', error);
     
-    if (error.message?.includes('fetch') || error.name === 'TypeError') {
+    if (error.name === 'TypeError' || error.message?.includes('fetch')) {
       return {
         success: false,
-        error: 'Network connection error। फिर कोशिश करें।',
-        needsRetry: true,
-        networkIssue: true
+        error: 'Network connection की समस्या है। Internet check करें।',
+        needsRetry: true
       };
     }
     
@@ -109,14 +91,10 @@ export const enhancedLogin = async (
   password: string
 ): Promise<AuthResult> => {
   try {
-    console.log('🔑 Enhanced login starting:', email);
+    console.log('🔑 Starting login:', email);
     
-    // Clean up any existing session first
-    try {
-      await supabase.auth.signOut();
-    } catch (cleanupError) {
-      console.log('🧹 Session cleanup (expected if no session):', cleanupError);
-    }
+    // Clean state before login
+    cleanAuthState();
     
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email.trim().toLowerCase(),
@@ -126,20 +104,10 @@ export const enhancedLogin = async (
     if (error) {
       console.error('❌ Login error:', error);
       
-      if (error.message.includes('fetch')) {
-        return {
-          success: false,
-          error: 'Network connection की समस्या है।',
-          needsRetry: true,
-          networkIssue: true
-        };
-      }
-      
       if (error.message.includes('Invalid login credentials')) {
         return {
           success: false,
-          error: 'गलत email या password।',
-          needsRetry: false
+          error: 'गलत email या password।'
         };
       }
       
@@ -164,12 +132,11 @@ export const enhancedLogin = async (
   } catch (error: any) {
     console.error('💥 Login failed:', error);
     
-    if (error.message?.includes('fetch') || error.name === 'TypeError') {
+    if (error.name === 'TypeError' || error.message?.includes('fetch')) {
       return {
         success: false,
         error: 'Network connection error।',
-        needsRetry: true,
-        networkIssue: true
+        needsRetry: true
       };
     }
     
