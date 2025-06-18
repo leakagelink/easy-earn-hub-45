@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
@@ -6,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RefreshCw, CheckCircle, AlertCircle, Wifi, WifiOff, Zap, Globe } from 'lucide-react';
 import { enhancedRegister, enhancedLogin } from '@/utils/authUtils';
-import { testSupabaseConnection } from '@/integrations/supabase/client';
+import { testSupabaseConnection } from '@/utils/connectionUtils';
 import { testNetworkQuality } from '@/utils/networkUtils';
 
 interface AuthFormProps {

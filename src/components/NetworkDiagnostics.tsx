@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { testNetworkQuality } from '@/utils/networkUtils';
-import { testSupabaseConnection } from '@/integrations/supabase/client';
+import { testSupabaseConnection } from '@/utils/connectionUtils';
 import { Wifi, WifiOff, RefreshCw, CheckCircle, AlertTriangle, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
