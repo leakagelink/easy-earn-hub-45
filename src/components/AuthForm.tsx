@@ -1,13 +1,15 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RefreshCw, CheckCircle, AlertCircle, Wifi, WifiOff, Zap, Globe } from 'lucide-react';
 import { enhancedRegister, enhancedLogin } from '@/utils/authUtils';
 import { testSupabaseConnection } from '@/utils/connectionUtils';
 import { testNetworkQuality } from '@/utils/networkUtils';
+import ConnectionStatusDisplay from './auth/ConnectionStatusDisplay';
+import NetworkQualityInfo from './auth/NetworkQualityInfo';
+import DebugInfo from './auth/DebugInfo';
+import AuthFormInputs from './auth/AuthFormInputs';
+import AuthFormSubmit from './auth/AuthFormSubmit';
 
 interface AuthFormProps {
   mode: 'login' | 'register';
@@ -210,98 +212,16 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   
   return (
     <div className="mx-auto w-full max-w-md p-6 bg-white rounded-lg shadow-md">
-      {/* POWERFUL Status Display */}
-      <div className={`mb-4 p-4 rounded-md border-2 ${
-        connectionStatus === 'connected' ? 'bg-green-50 border-green-300' :
-        connectionStatus === 'network-issue' ? 'bg-orange-50 border-orange-300' :
-        connectionStatus === 'disconnected' ? 'bg-red-50 border-red-300' :
-        'bg-blue-50 border-blue-300'
-      }`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            {connectionStatus === 'checking' && (
-              <>
-                <RefreshCw className="h-5 w-5 animate-spin text-blue-500" />
-                <span className="text-sm text-blue-700 font-semibold">Testing Connection...</span>
-              </>
-            )}
-            {connectionStatus === 'connected' && (
-              <>
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <span className="text-sm text-green-700 font-semibold">🚀 System Ready</span>
-              </>
-            )}
-            {connectionStatus === 'network-issue' && (
-              <>
-                <Globe className="h-5 w-5 text-orange-600" />
-                <span className="text-sm text-orange-700 font-semibold">🌐 Network Issue</span>
-              </>
-            )}
-            {connectionStatus === 'disconnected' && (
-              <>
-                <AlertCircle className="h-5 w-5 text-red-600" />
-                <span className="text-sm text-red-700 font-semibold">⚠️ Connection Problem</span>
-              </>
-            )}
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            {connectionStatus !== 'connected' && (
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={handleRetry}
-                className="text-xs"
-              >
-                <RefreshCw className="h-3 w-3 mr-1" />
-                Fix
-              </Button>
-            )}
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              onClick={() => setDebugMode(!debugMode)}
-              className="text-xs"
-            >
-              Debug
-            </Button>
-          </div>
-        </div>
-        
-        {/* Network Quality Display */}
-        {networkQuality && (
-          <div className="mt-2 text-xs">
-            <div className="flex items-center space-x-2">
-              {networkQuality.speed === 'fast' && <Zap className="h-3 w-3 text-green-500" />}
-              {networkQuality.speed === 'slow' && <Wifi className="h-3 w-3 text-yellow-500" />}
-              {networkQuality.speed === 'offline' && <WifiOff className="h-3 w-3 text-red-500" />}
-              <span className={networkQuality.canReachSupabase ? 'text-green-600' : 'text-red-600'}>
-                Network: {networkQuality.speed} ({networkQuality.latency}ms)
-                {networkQuality.canReachSupabase ? ' ✅' : ' ❌'}
-              </span>
-            </div>
-          </div>
-        )}
-        
-        {/* Error Display */}
-        {lastError && (
-          <div className="mt-2 p-2 bg-red-100 rounded text-xs text-red-700">
-            <strong>Error:</strong> {lastError}
-          </div>
-        )}
-        
-        {/* Debug Info */}
-        {debugMode && (
-          <div className="mt-3 p-3 bg-gray-100 rounded text-xs font-mono">
-            <div><strong>URL:</strong> {window.location.origin}</div>
-            <div><strong>Retry Count:</strong> {retryCount}</div>
-            <div><strong>Browser:</strong> {navigator.userAgent.substring(0, 30)}...</div>
-            <div><strong>Online:</strong> {navigator.onLine ? 'Yes' : 'No'}</div>
-            <div><strong>Cookies:</strong> {navigator.cookieEnabled ? 'Enabled' : 'Disabled'}</div>
-            <div><strong>Storage Keys:</strong> {Object.keys(localStorage).filter(k => k.includes('supabase')).length}</div>
-          </div>
-        )}
-      </div>
+      <ConnectionStatusDisplay
+        connectionStatus={connectionStatus}
+        onRetry={handleRetry}
+        onToggleDebug={() => setDebugMode(!debugMode)}
+        lastError={lastError}
+      />
+      
+      <NetworkQualityInfo networkQuality={networkQuality} />
+      
+      <DebugInfo debugMode={debugMode} retryCount={retryCount} />
 
       <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
         {mode === 'login' ? '🔑 Login करें' : '📝 नया Account बनाएं'}
@@ -316,90 +236,25 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       )}
       
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="email" className="text-sm font-medium">📧 Email Address</Label>
-          <Input 
-            id="email" 
-            type="email" 
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="your@email.com"
-            required
-            className="w-full"
-          />
-        </div>
+        <AuthFormInputs
+          mode={mode}
+          email={email}
+          setEmail={setEmail}
+          phone={phone}
+          setPhone={setPhone}
+          password={password}
+          setPassword={setPassword}
+          confirmPassword={confirmPassword}
+          setConfirmPassword={setConfirmPassword}
+          referralCode={referralCode}
+          setReferralCode={setReferralCode}
+        />
         
-        {mode === 'register' && (
-          <div className="space-y-2">
-            <Label htmlFor="phone" className="text-sm font-medium">📱 Phone Number</Label>
-            <Input 
-              id="phone" 
-              type="tel" 
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="9876543210"
-              required
-              className="w-full"
-            />
-          </div>
-        )}
-        
-        <div className="space-y-2">
-          <Label htmlFor="password" className="text-sm font-medium">🔒 Password</Label>
-          <Input 
-            id="password" 
-            type="password" 
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="कम से कम 6 characters"
-            required
-            className="w-full"
-          />
-        </div>
-        
-        {mode === 'register' && (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-sm font-medium">🔒 Confirm Password</Label>
-              <Input 
-                id="confirmPassword" 
-                type="password" 
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Password दोबारा डालें"
-                required
-                className="w-full"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="referralCode" className="text-sm font-medium">🎁 Referral Code (Optional)</Label>
-              <Input 
-                id="referralCode" 
-                type="text" 
-                value={referralCode}
-                onChange={(e) => setReferralCode(e.target.value)}
-                placeholder="Referral code (optional)"
-                className="w-full"
-              />
-            </div>
-          </>
-        )}
-        
-        <Button 
-          type="submit" 
-          className="w-full bg-easyearn-purple hover:bg-easyearn-darkpurple text-white font-medium py-3"
-          disabled={isLoading || connectionStatus !== 'connected'}
-        >
-          {isLoading ? (
-            <span className="flex items-center justify-center">
-              <RefreshCw className="animate-spin -ml-1 mr-2 h-4 w-4" />
-              {mode === 'login' ? 'Login हो रहा है...' : 'Account बन रहा है...'}
-            </span>
-          ) : (
-            mode === 'login' ? '🚀 Login करें' : '🎯 Register करें'
-          )}
-        </Button>
+        <AuthFormSubmit
+          mode={mode}
+          isLoading={isLoading}
+          connectionStatus={connectionStatus}
+        />
       </form>
       
       <div className="text-center mt-6">
