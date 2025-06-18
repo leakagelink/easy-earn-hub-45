@@ -1,12 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useUser, useSignIn, useSignUp } from '@clerk/clerk-react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, AlertCircle, Wifi, WifiOff } from 'lucide-react';
 
 interface CleanAuthFormProps {
   mode: 'login' | 'register';
@@ -17,6 +17,9 @@ const CleanAuthForm: React.FC<CleanAuthFormProps> = ({ mode }) => {
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [networkStatus, setNetworkStatus] = useState(navigator.onLine);
   
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -30,24 +33,127 @@ const CleanAuthForm: React.FC<CleanAuthFormProps> = ({ mode }) => {
     isLoaded, 
     signInLoaded, 
     signUpLoaded,
+    loadingTimeout,
+    retryCount,
+    networkStatus,
     userEmail: user?.emailAddresses?.[0]?.emailAddress 
   });
 
+  // Monitor network status
+  useEffect(() => {
+    const handleOnline = () => setNetworkStatus(true);
+    const handleOffline = () => setNetworkStatus(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Handle loading timeout
+  useEffect(() => {
+    if (!isLoaded) {
+      const timeout = setTimeout(() => {
+        console.log('⚠️ Clerk loading timeout after 10 seconds');
+        setLoadingTimeout(true);
+      }, 10000);
+      
+      return () => clearTimeout(timeout);
+    } else {
+      setLoadingTimeout(false);
+    }
+  }, [isLoaded]);
+
   // If user is already signed in, redirect
-  React.useEffect(() => {
+  useEffect(() => {
     if (isSignedIn && isLoaded) {
       console.log('✅ User already signed in, redirecting to dashboard');
       navigate('/dashboard');
     }
   }, [isSignedIn, isLoaded, navigate]);
 
-  // Show loading while Clerk is initializing
-  if (!isLoaded) {
+  const handleRetry = () => {
+    console.log('🔄 Retrying Clerk initialization...');
+    setRetryCount(prev => prev + 1);
+    setLoadingTimeout(false);
+    window.location.reload();
+  };
+
+  const handleForceRefresh = () => {
+    console.log('🌀 Force refreshing page...');
+    window.location.href = window.location.href;
+  };
+
+  // Show loading with timeout handling
+  if (!isLoaded && !loadingTimeout) {
     return (
       <div className="w-full max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
         <div className="text-center">
           <RefreshCw className="animate-spin h-8 w-8 mx-auto mb-4 text-easyearn-purple" />
-          <p className="text-gray-600">Loading authentication...</p>
+          <p className="text-gray-600 mb-2">Authentication loading कर रहा है...</p>
+          <div className="text-xs text-gray-500">
+            {!networkStatus && (
+              <div className="flex items-center justify-center text-red-500 mb-2">
+                <WifiOff className="h-4 w-4 mr-1" />
+                Network offline है
+              </div>
+            )}
+            <p>Retry count: {retryCount}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if timeout occurred
+  if (loadingTimeout || (!isLoaded && !signInLoaded && !signUpLoaded)) {
+    return (
+      <div className="w-full max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-500" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Authentication Load नहीं हो रहा
+          </h3>
+          <p className="text-gray-600 mb-4">
+            Clerk authentication system load नहीं हो पा रहा है। कृपया retry करें।
+          </p>
+          
+          {!networkStatus && (
+            <div className="bg-red-50 p-3 rounded-lg mb-4">
+              <div className="flex items-center text-red-700">
+                <WifiOff className="h-4 w-4 mr-2" />
+                <span className="text-sm">Internet connection check करें</span>
+              </div>
+            </div>
+          )}
+          
+          <div className="space-y-3">
+            <Button
+              onClick={handleRetry}
+              className="w-full bg-easyearn-purple hover:bg-easyearn-darkpurple"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry करें
+            </Button>
+            
+            <Button
+              onClick={handleForceRefresh}
+              variant="outline"
+              className="w-full"
+            >
+              Page Refresh करें
+            </Button>
+            
+            <div className="text-xs text-gray-500 mt-4">
+              <p>Debug Info:</p>
+              <p>Retry Count: {retryCount}</p>
+              <p>Network: {networkStatus ? 'Online' : 'Offline'}</p>
+              <p>Clerk Loaded: {isLoaded ? 'Yes' : 'No'}</p>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -118,7 +224,6 @@ const CleanAuthForm: React.FC<CleanAuthFormProps> = ({ mode }) => {
           });
           navigate('/dashboard');
         } else if (result.status === 'missing_requirements') {
-          // Handle email verification
           toast({
             title: "Verification Required",
             description: "Please check your email to verify your account"
@@ -188,9 +293,18 @@ const CleanAuthForm: React.FC<CleanAuthFormProps> = ({ mode }) => {
 
   return (
     <div className="w-full max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
-      <h2 className="text-2xl font-bold text-center mb-6">
-        {mode === 'login' ? '🔑 Login' : '📝 Register'}
-      </h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold">
+          {mode === 'login' ? '🔑 Login' : '📝 Register'}
+        </h2>
+        <div className="flex items-center text-xs text-gray-500">
+          {networkStatus ? (
+            <Wifi className="h-3 w-3 text-green-500" />
+          ) : (
+            <WifiOff className="h-3 w-3 text-red-500" />
+          )}
+        </div>
+      </div>
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
