@@ -1,13 +1,34 @@
 
 import React from 'react';
-import { SignIn, SignUp, useUser, UserButton } from '@clerk/clerk-react';
+import { SignIn, SignUp, useUser, UserButton, useAuth } from '@clerk/clerk-react';
 
 interface ClerkAuthFormProps {
   mode: 'login' | 'register';
 }
 
 const ClerkAuthForm: React.FC<ClerkAuthFormProps> = ({ mode }) => {
-  const { isSignedIn, user } = useUser();
+  const { isSignedIn, user, isLoaded } = useUser();
+  const { isLoaded: authLoaded } = useAuth();
+
+  console.log('🔍 ClerkAuthForm Debug:', { 
+    mode, 
+    isSignedIn, 
+    isLoaded, 
+    authLoaded,
+    userEmail: user?.emailAddresses[0]?.emailAddress 
+  });
+
+  // Loading state
+  if (!isLoaded || !authLoaded) {
+    return (
+      <div className="w-full max-w-md mx-auto p-8 bg-white rounded-xl shadow-lg text-center">
+        <div className="flex items-center justify-center space-x-2">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-easyearn-purple"></div>
+          <span className="text-gray-600">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   if (isSignedIn) {
     return (
@@ -45,57 +66,71 @@ const ClerkAuthForm: React.FC<ClerkAuthFormProps> = ({ mode }) => {
 
   return (
     <div className="w-full max-w-md mx-auto">
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden min-h-[400px]">
         {mode === 'login' ? (
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <SignIn 
+              routing="path"
+              path="/login"
               fallbackRedirectUrl="/dashboard"
+              signUpUrl="/register"
               appearance={{
                 elements: {
                   rootBox: "w-full",
-                  card: "shadow-none border-none p-0 bg-transparent",
-                  headerTitle: "text-2xl font-bold text-gray-900",
-                  headerSubtitle: "text-gray-600",
-                  socialButtonsBlockButton: "border border-gray-300 hover:border-easyearn-purple hover:bg-gray-50 text-gray-700",
+                  card: "shadow-none border-none p-0 bg-transparent w-full",
+                  headerTitle: "text-xl sm:text-2xl font-bold text-gray-900 text-center",
+                  headerSubtitle: "text-gray-600 text-center text-sm sm:text-base",
+                  socialButtonsBlockButton: "w-full border border-gray-300 hover:border-easyearn-purple hover:bg-gray-50 text-gray-700 text-sm sm:text-base py-2 sm:py-3",
                   socialButtonsBlockButtonText: "font-medium",
-                  formButtonPrimary: "bg-easyearn-purple hover:bg-easyearn-darkpurple text-white font-medium py-3",
-                  footerActionLink: "text-easyearn-purple hover:text-easyearn-darkpurple font-medium",
+                  formButtonPrimary: "w-full bg-easyearn-purple hover:bg-easyearn-darkpurple text-white font-medium py-2 sm:py-3 text-sm sm:text-base",
+                  footerActionLink: "text-easyearn-purple hover:text-easyearn-darkpurple font-medium text-sm",
                   identityPreviewEditButton: "text-easyearn-purple hover:text-easyearn-darkpurple",
-                  formFieldInput: "border border-gray-300 rounded-lg px-4 py-3 focus:border-easyearn-purple focus:ring-2 focus:ring-easyearn-purple/20",
-                  formFieldLabel: "text-gray-700 font-medium",
+                  formFieldInput: "w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2 sm:py-3 focus:border-easyearn-purple focus:ring-2 focus:ring-easyearn-purple/20 text-sm sm:text-base",
+                  formFieldLabel: "text-gray-700 font-medium text-sm sm:text-base",
                   dividerLine: "bg-gray-200",
-                  dividerText: "text-gray-500",
-                  otpCodeFieldInput: "border border-gray-300 rounded-lg focus:border-easyearn-purple"
+                  dividerText: "text-gray-500 text-xs sm:text-sm",
+                  otpCodeFieldInput: "border border-gray-300 rounded-lg focus:border-easyearn-purple text-center",
+                  main: "w-full",
+                  formContainer: "w-full space-y-4",
+                  form: "w-full space-y-4"
                 },
                 layout: {
-                  socialButtonsPlacement: "top"
+                  socialButtonsPlacement: "top",
+                  showOptionalFields: true
                 }
               }}
             />
           </div>
         ) : (
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <SignUp 
+              routing="path"
+              path="/register"
               fallbackRedirectUrl="/dashboard"
+              signInUrl="/login"
               appearance={{
                 elements: {
                   rootBox: "w-full",
-                  card: "shadow-none border-none p-0 bg-transparent",
-                  headerTitle: "text-2xl font-bold text-gray-900",
-                  headerSubtitle: "text-gray-600",
-                  socialButtonsBlockButton: "border border-gray-300 hover:border-easyearn-purple hover:bg-gray-50 text-gray-700",
+                  card: "shadow-none border-none p-0 bg-transparent w-full",
+                  headerTitle: "text-xl sm:text-2xl font-bold text-gray-900 text-center",
+                  headerSubtitle: "text-gray-600 text-center text-sm sm:text-base",
+                  socialButtonsBlockButton: "w-full border border-gray-300 hover:border-easyearn-purple hover:bg-gray-50 text-gray-700 text-sm sm:text-base py-2 sm:py-3",
                   socialButtonsBlockButtonText: "font-medium",
-                  formButtonPrimary: "bg-easyearn-purple hover:bg-easyearn-darkpurple text-white font-medium py-3",
-                  footerActionLink: "text-easyearn-purple hover:text-easyearn-darkpurple font-medium",
+                  formButtonPrimary: "w-full bg-easyearn-purple hover:bg-easyearn-darkpurple text-white font-medium py-2 sm:py-3 text-sm sm:text-base",
+                  footerActionLink: "text-easyearn-purple hover:text-easyearn-darkpurple font-medium text-sm",
                   identityPreviewEditButton: "text-easyearn-purple hover:text-easyearn-darkpurple",
-                  formFieldInput: "border border-gray-300 rounded-lg px-4 py-3 focus:border-easyearn-purple focus:ring-2 focus:ring-easyearn-purple/20",
-                  formFieldLabel: "text-gray-700 font-medium",
+                  formFieldInput: "w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2 sm:py-3 focus:border-easyearn-purple focus:ring-2 focus:ring-easyearn-purple/20 text-sm sm:text-base",
+                  formFieldLabel: "text-gray-700 font-medium text-sm sm:text-base",
                   dividerLine: "bg-gray-200",
-                  dividerText: "text-gray-500",
-                  otpCodeFieldInput: "border border-gray-300 rounded-lg focus:border-easyearn-purple"
+                  dividerText: "text-gray-500 text-xs sm:text-sm",
+                  otpCodeFieldInput: "border border-gray-300 rounded-lg focus:border-easyearn-purple text-center",
+                  main: "w-full",
+                  formContainer: "w-full space-y-4",
+                  form: "w-full space-y-4"
                 },
                 layout: {
-                  socialButtonsPlacement: "top"
+                  socialButtonsPlacement: "top",
+                  showOptionalFields: true
                 }
               }}
             />
