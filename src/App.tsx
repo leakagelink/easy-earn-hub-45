@@ -4,7 +4,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { SupabaseAuthProvider } from "@/contexts/auth/SupabaseAuthProvider";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -37,43 +36,41 @@ const queryClient = new QueryClient({
   },
 });
 
-console.log('🚀 EasyEarn App Starting...');
+console.log('🚀 EasyEarn App Starting with ONLY Clerk Authentication...');
 console.log('🌐 Current URL:', window.location.href);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <SupabaseAuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/invest" element={<Invest />} />
-            <Route path="/recharge" element={<Recharge />} />
-            <Route path="/withdraw" element={<Withdraw />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/payment" element={<Payment />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/maintenance" element={<MaintenancePage />} />
-            <Route path="/admin/users" element={<AdminUsers />} />
-            <Route path="/admin/investments" element={<AdminInvestments />} />
-            <Route path="/admin/transactions" element={<AdminTransactions />} />
-            <Route path="/admin/withdrawals" element={<AdminWithdrawals />} />
-            <Route path="/admin/payments" element={<AdminPayments />} />
-            <Route path="/admin/plans" element={<AdminPlans />} />
-            <Route path="/admin/reports" element={<AdminReports />} />
-            <Route path="/admin/settings" element={<AdminSettings />} />
-            <Route path="/admin/security" element={<AdminSecurity />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </SupabaseAuthProvider>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/invest" element={<Invest />} />
+          <Route path="/recharge" element={<Recharge />} />
+          <Route path="/withdraw" element={<Withdraw />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/payment" element={<Payment />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/maintenance" element={<MaintenancePage />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/investments" element={<AdminInvestments />} />
+          <Route path="/admin/transactions" element={<AdminTransactions />} />
+          <Route path="/admin/withdrawals" element={<AdminWithdrawals />} />
+          <Route path="/admin/payments" element={<AdminPayments />} />
+          <Route path="/admin/plans" element={<AdminPlans />} />
+          <Route path="/admin/reports" element={<AdminReports />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin/security" element={<AdminSecurity />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
   </QueryClientProvider>
 );
 

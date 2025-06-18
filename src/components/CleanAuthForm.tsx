@@ -5,7 +5,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from '@/integrations/supabase/client';
+import { useUser, useSignIn, useSignUp } from '@clerk/clerk-react';
 
 interface CleanAuthFormProps {
   mode: 'login' | 'register';
@@ -19,6 +19,16 @@ const CleanAuthForm: React.FC<CleanAuthFormProps> = ({ mode }) => {
   
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { isSignedIn, user } = useUser();
+  const { signIn, isLoaded: signInLoaded } = useSignIn();
+  const { signUp, isLoaded: signUpLoaded } = useSignUp();
+
+  // If user is already signed in, redirect
+  React.useEffect(() => {
+    if (isSignedIn) {
+      navigate('/dashboard');
+    }
+  }, [isSignedIn, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,100 +55,87 @@ const CleanAuthForm: React.FC<CleanAuthFormProps> = ({ mode }) => {
     
     try {
       if (mode === 'register') {
-        console.log('🔥 Starting clean registration...');
+        console.log('🔥 Starting Clerk registration...');
         
-        const { data, error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password: password.trim(),
-          options: {
-            emailRedirectTo: window.location.origin,
-            data: {
-              phone: phone.trim()
-            }
-          }
-        });
-
-        if (error) {
-          console.error('Registration error:', error);
-          
-          if (error.message.includes('User already registered')) {
-            toast({
-              title: "Account Already Exists",
-              description: "यह email पहले से registered है। Login करें।",
-              variant: "destructive"
-            });
-          } else {
-            toast({
-              title: "Registration Failed",
-              description: error.message,
-              variant: "destructive"
-            });
-          }
+        if (!signUp || !signUpLoaded) {
+          toast({
+            title: "Error",
+            description: "Registration system loading... कृपया wait करें",
+            variant: "destructive"
+          });
           return;
         }
 
-        if (data.user) {
+        const result = await signUp.create({
+          emailAddress: email.trim(),
+          password: password.trim(),
+          unsafeMetadata: {
+            phone: phone.trim()
+          }
+        });
+
+        if (result.status === 'complete') {
           toast({
             title: "Success! 🎉",
-            description: "Account बन गया है! अब login करें।"
+            description: "Account successfully created!"
           });
-          
-          // Clear form
-          setEmail('');
-          setPassword('');
-          setPhone('');
-          
-          // Redirect to login after 2 seconds
-          setTimeout(() => {
-            navigate('/login');
-          }, 2000);
+          navigate('/dashboard');
+        } else {
+          // Handle email verification if needed
+          toast({
+            title: "Verification Required",
+            description: "Please check your email to verify your account"
+          });
         }
 
       } else {
-        console.log('🔥 Starting clean login...');
+        console.log('🔥 Starting Clerk login...');
         
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password: password.trim()
-        });
-
-        if (error) {
-          console.error('Login error:', error);
-          
-          if (error.message.includes('Invalid login credentials')) {
-            toast({
-              title: "Login Failed",
-              description: "गलत email या password",
-              variant: "destructive"
-            });
-          } else {
-            toast({
-              title: "Login Failed", 
-              description: error.message,
-              variant: "destructive"
-            });
-          }
+        if (!signIn || !signInLoaded) {
+          toast({
+            title: "Error",
+            description: "Login system loading... कृपया wait करें",
+            variant: "destructive"
+          });
           return;
         }
 
-        if (data.user) {
+        const result = await signIn.create({
+          identifier: email.trim(),
+          password: password.trim()
+        });
+
+        if (result.status === 'complete') {
           toast({
             title: "Login Successful! 🎉",
             description: "Welcome back!"
           });
-          
-          setTimeout(() => {
-            navigate('/dashboard');
-          }, 1000);
+          navigate('/dashboard');
         }
       }
 
     } catch (error: any) {
-      console.error('Auth error:', error);
+      console.error('Clerk auth error:', error);
+      
+      let errorMessage = "कुछ गलत हुआ है। फिर कोशिश करें।";
+      
+      if (error.errors && error.errors.length > 0) {
+        const clerkError = error.errors[0];
+        
+        if (clerkError.code === 'form_identifier_exists') {
+          errorMessage = "यह email पहले से registered है। Login करें।";
+        } else if (clerkError.code === 'form_password_incorrect') {
+          errorMessage = "गलत password है।";
+        } else if (clerkError.code === 'form_identifier_not_found') {
+          errorMessage = "यह email registered नहीं है।";
+        } else {
+          errorMessage = clerkError.message || errorMessage;
+        }
+      }
       
       toast({
-        title: "Connection Error",
-        description: "Network issue हो सकती है। फिर कोशिश करें।",
+        title: mode === 'login' ? "Login Failed" : "Registration Failed",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -194,7 +191,7 @@ const CleanAuthForm: React.FC<CleanAuthFormProps> = ({ mode }) => {
         <Button
           type="submit"
           className="w-full"
-          disabled={isLoading}
+          disabled={isLoading || !signInLoaded || !signUpLoaded}
         >
           {isLoading ? (
             mode === 'login' ? 'Logging in...' : 'Creating account...'

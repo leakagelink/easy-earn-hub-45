@@ -1,14 +1,13 @@
 
 import { useState, useEffect } from 'react';
-import { useSupabaseAuth } from '@/contexts/auth/SupabaseAuthProvider';
-import { supabase } from '@/integrations/supabase/client';
+import { useUser } from '@clerk/clerk-react';
 
 export const useDashboardData = () => {
   const [balance, setBalance] = useState(0);
   const [investments, setInvestments] = useState([]);
   const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const { currentUser } = useSupabaseAuth();
+  const [loading, setLoading] = useState(false);
+  const { user } = useUser();
 
   // Calculate derived values
   const totalEarned = transactions.reduce((sum: number, tx: any) => {
@@ -24,47 +23,14 @@ export const useDashboardData = () => {
   }, 0);
 
   useEffect(() => {
-    if (!currentUser?.id) return;
+    if (!user?.id) return;
     
-    const fetchUserData = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch user investments using type assertion
-        const { data: investmentsData, error: investmentsError } = await (supabase as any)
-          .from('investments')
-          .select('*')
-          .eq('user_id', currentUser.id)
-          .order('created_at', { ascending: false });
-
-        if (investmentsError) throw investmentsError;
-        setInvestments(investmentsData || []);
-
-        // Fetch user transactions using type assertion
-        const { data: transactionsData, error: transactionsError } = await (supabase as any)
-          .from('transactions')
-          .select('*')
-          .eq('user_id', currentUser.id)
-          .order('created_at', { ascending: false });
-
-        if (transactionsError) throw transactionsError;
-        setTransactions(transactionsData || []);
-
-        // Calculate balance from transactions
-        const totalBalance = (transactionsData || []).reduce((acc: number, transaction: any) => {
-          return transaction.type === 'credit' ? acc + transaction.amount : acc - transaction.amount;
-        }, 0);
-        setBalance(totalBalance);
-
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserData();
-  }, [currentUser?.id]);
+    // Mock data for now - will be replaced with actual API calls later
+    setLoading(false);
+    setBalance(1000);
+    setInvestments([]);
+    setTransactions([]);
+  }, [user?.id]);
 
   return {
     balance,
