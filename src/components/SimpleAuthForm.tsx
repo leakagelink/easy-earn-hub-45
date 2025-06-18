@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RefreshCw } from 'lucide-react';
-import { simpleRegister, simpleLogin } from '@/utils/simpleAuth';
+import { useSupabaseAuth } from '@/contexts/auth/SupabaseAuthProvider';
 
 interface SimpleAuthFormProps {
   mode: 'login' | 'register';
@@ -23,11 +23,14 @@ const SimpleAuthForm: React.FC<SimpleAuthFormProps> = ({ mode, selectedPlan }) =
   
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { login, register } = useSupabaseAuth();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validation
+    console.log('🚀 Form submission started:', { mode, email, phone });
+    
+    // Enhanced validation
     if (!email || !email.includes('@')) {
       toast({ 
         title: "Error", 
@@ -50,7 +53,7 @@ const SimpleAuthForm: React.FC<SimpleAuthFormProps> = ({ mode, selectedPlan }) =
       if (!phone || phone.length < 10) {
         toast({ 
           title: "Error", 
-          description: "सही phone number डालें",
+          description: "सही phone number डालें (10+ digits)",
           variant: "destructive" 
         });
         return;
@@ -69,38 +72,50 @@ const SimpleAuthForm: React.FC<SimpleAuthFormProps> = ({ mode, selectedPlan }) =
     setIsLoading(true);
     
     try {
-      let result;
-      
       if (mode === 'login') {
-        result = await simpleLogin(email, password);
-      } else {
-        result = await simpleRegister(email, password, phone, referralCode);
-      }
-      
-      if (result.success) {
+        console.log('🔑 Starting login process...');
+        await login(email, password);
+        
         toast({
-          title: mode === 'login' ? "Login Successful!" : "Registration Successful!",
-          description: mode === 'login' ? "Welcome back!" : "Account successfully created!",
+          title: "🎉 Login Successful!",
+          description: "Welcome back!",
         });
         
-        if (mode === 'login') {
-          setTimeout(() => navigate('/invest'), 1000);
-        } else {
-          setTimeout(() => navigate('/login'), 2000);
-        }
+        setTimeout(() => navigate('/dashboard'), 1000);
+        
       } else {
+        console.log('📝 Starting registration process...', { email, phone, referralCode });
+        await register(email, password, phone, referralCode);
+        
         toast({
-          title: mode === 'login' ? "Login Failed" : "Registration Failed",
-          description: result.error || 'कुछ तकनीकी समस्या है।',
-          variant: "destructive"
+          title: "🎉 Registration Successful!",
+          description: "Please check your email for verification link!",
         });
+        
+        setTimeout(() => navigate('/login'), 2000);
       }
       
     } catch (error: any) {
-      console.error('Form submission error:', error);
+      console.error('💥 Auth error:', error);
+      
+      let errorMessage = 'कुछ तकनीकी समस्या है।';
+      
+      if (error.message) {
+        // Handle common Supabase errors
+        if (error.message.includes('User already registered')) {
+          errorMessage = 'यह email already registered है। Login करें।';
+        } else if (error.message.includes('Invalid login credentials')) {
+          errorMessage = 'गलत email या password।';
+        } else if (error.message.includes('fetch')) {
+          errorMessage = 'Network connection की समस्या है। फिर कोशिश करें।';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
-        title: "Error",
-        description: "कुछ अनपेक्षित समस्या है। फिर कोशिश करें।",
+        title: mode === 'login' ? "Login Failed" : "Registration Failed",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -225,6 +240,17 @@ const SimpleAuthForm: React.FC<SimpleAuthFormProps> = ({ mode, selectedPlan }) =
             </a>
           </p>
         )}
+      </div>
+      
+      <div className="mt-6 text-center">
+        <div className="p-3 bg-green-50 rounded-md border border-green-200">
+          <p className="text-xs text-green-700 font-medium">
+            ✅ Enhanced Registration System
+          </p>
+          <p className="text-xs text-green-600 mt-1">
+            Supabase authentication के साथ automatic profile creation!
+          </p>
+        </div>
       </div>
     </div>
   );
