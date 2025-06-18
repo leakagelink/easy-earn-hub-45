@@ -1,8 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { useFirebaseAuth } from '@/contexts/auth/FirebaseAuthProvider';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { db } from '@/integrations/firebase/config';
+import { useSupabaseAuth } from '@/contexts/auth/SupabaseAuthProvider';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useAdminData = () => {
   const [users, setUsers] = useState([]);
@@ -11,7 +10,7 @@ export const useAdminData = () => {
   const [withdrawals, setWithdrawals] = useState([]);
   const [paymentRequests, setPaymentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { isAdmin } = useFirebaseAuth();
+  const { isAdmin } = useSupabaseAuth();
 
   // Calculate stats from the data
   const stats = {
@@ -28,53 +27,49 @@ export const useAdminData = () => {
       try {
         setLoading(true);
         
-        // Fetch users
-        const usersSnapshot = await getDocs(collection(db, 'users'));
-        const usersData = usersSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setUsers(usersData);
+        // Fetch users from profiles table
+        const { data: usersData, error: usersError } = await supabase
+          .from('profiles')
+          .select('*');
+        
+        if (usersError) throw usersError;
+        setUsers(usersData || []);
 
         // Fetch investments
-        const investmentsSnapshot = await getDocs(
-          query(collection(db, 'investments'), orderBy('createdAt', 'desc'))
-        );
-        const investmentsData = investmentsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setInvestments(investmentsData);
+        const { data: investmentsData, error: investmentsError } = await supabase
+          .from('investments')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (investmentsError) throw investmentsError;
+        setInvestments(investmentsData || []);
 
         // Fetch transactions
-        const transactionsSnapshot = await getDocs(
-          query(collection(db, 'transactions'), orderBy('createdAt', 'desc'))
-        );
-        const transactionsData = transactionsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setTransactions(transactionsData);
+        const { data: transactionsData, error: transactionsError } = await supabase
+          .from('transactions')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (transactionsError) throw transactionsError;
+        setTransactions(transactionsData || []);
 
         // Fetch withdrawals
-        const withdrawalsSnapshot = await getDocs(
-          query(collection(db, 'withdrawals'), orderBy('createdAt', 'desc'))
-        );
-        const withdrawalsData = withdrawalsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setWithdrawals(withdrawalsData);
+        const { data: withdrawalsData, error: withdrawalsError } = await supabase
+          .from('withdrawals')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (withdrawalsError) throw withdrawalsError;
+        setWithdrawals(withdrawalsData || []);
 
         // Fetch payment requests
-        const paymentRequestsSnapshot = await getDocs(
-          query(collection(db, 'paymentRequests'), orderBy('createdAt', 'desc'))
-        );
-        const paymentRequestsData = paymentRequestsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setPaymentRequests(paymentRequestsData);
+        const { data: paymentRequestsData, error: paymentRequestsError } = await supabase
+          .from('payment_requests')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (paymentRequestsError) throw paymentRequestsError;
+        setPaymentRequests(paymentRequestsData || []);
 
       } catch (error) {
         console.error('Error fetching admin data:', error);

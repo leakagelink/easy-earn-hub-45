@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { useSupabaseAuth } from '@/contexts/auth';
-import { firebaseService } from '@/services/firebaseService';
+import { supabaseService } from '@/services/supabaseService';
 
 const Payment = () => {
   const navigate = useNavigate();
@@ -53,7 +53,7 @@ const Payment = () => {
 
       const planData = JSON.parse(selectedPlan);
 
-      console.log('Submitting payment request with Firebase:', {
+      console.log('Submitting payment request with Supabase:', {
         userId: currentUser?.id,
         planId: planData.id,
         transactionId: transactionId,
@@ -61,7 +61,7 @@ const Payment = () => {
         amount: planData.price,
       });
 
-      const result = await firebaseService.purchasePlan({
+      const result = await supabaseService.purchasePlan({
         userId: currentUser?.id,
         planId: planData.id,
         transactionId: transactionId,

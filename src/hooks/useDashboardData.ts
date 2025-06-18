@@ -1,15 +1,14 @@
 
 import { useState, useEffect } from 'react';
-import { useFirebaseAuth } from '@/contexts/auth/FirebaseAuthProvider';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import { db } from '@/integrations/firebase/config';
+import { useSupabaseAuth } from '@/contexts/auth/SupabaseAuthProvider';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useDashboardData = () => {
   const [balance, setBalance] = useState(0);
   const [investments, setInvestments] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { currentUser } = useFirebaseAuth();
+  const { currentUser } = useSupabaseAuth();
 
   // Calculate derived values
   const totalEarned = transactions.reduce((sum: number, tx: any) => {
@@ -25,40 +24,34 @@ export const useDashboardData = () => {
   }, 0);
 
   useEffect(() => {
-    if (!currentUser?.uid) return;
+    if (!currentUser?.id) return;
     
     const fetchUserData = async () => {
       try {
         setLoading(true);
         
         // Fetch user investments
-        const investmentsQuery = query(
-          collection(db, 'investments'),
-          where('userId', '==', currentUser.uid),
-          orderBy('createdAt', 'desc')
-        );
-        const investmentsSnapshot = await getDocs(investmentsQuery);
-        const investmentsData = investmentsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setInvestments(investmentsData);
+        const { data: investmentsData, error: investmentsError } = await supabase
+          .from('investments')
+          .select('*')
+          .eq('user_id', currentUser.id)
+          .order('created_at', { ascending: false });
+
+        if (investmentsError) throw investmentsError;
+        setInvestments(investmentsData || []);
 
         // Fetch user transactions
-        const transactionsQuery = query(
-          collection(db, 'transactions'),
-          where('userId', '==', currentUser.uid),
-          orderBy('createdAt', 'desc')
-        );
-        const transactionsSnapshot = await getDocs(transactionsQuery);
-        const transactionsData = transactionsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setTransactions(transactionsData);
+        const { data: transactionsData, error: transactionsError } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('user_id', currentUser.id)
+          .order('created_at', { ascending: false });
+
+        if (transactionsError) throw transactionsError;
+        setTransactions(transactionsData || []);
 
         // Calculate balance from transactions
-        const totalBalance = transactionsData.reduce((acc: number, transaction: any) => {
+        const totalBalance = (transactionsData || []).reduce((acc: number, transaction: any) => {
           return transaction.type === 'credit' ? acc + transaction.amount : acc - transaction.amount;
         }, 0);
         setBalance(totalBalance);
@@ -71,7 +64,7 @@ export const useDashboardData = () => {
     };
 
     fetchUserData();
-  }, [currentUser?.uid]);
+  }, [currentUser?.id]);
 
   return {
     balance,

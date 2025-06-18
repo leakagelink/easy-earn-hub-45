@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
-import { firebaseService } from '@/services/firebaseService';
+import { supabaseService } from '@/services/supabaseService';
 import { CheckCircle, XCircle } from 'lucide-react';
 
 interface PaymentRequest {
@@ -41,7 +41,7 @@ const PaymentRequestsTable: React.FC<PaymentRequestsTableProps> = ({
 
   const handleApprove = async (requestId: string) => {
     try {
-      const result = await firebaseService.updatePaymentRequest(requestId, { 
+      const result = await supabaseService.updatePaymentRequest(requestId, { 
         status: 'approved',
         approved_at: new Date().toISOString()
       });
@@ -70,7 +70,7 @@ const PaymentRequestsTable: React.FC<PaymentRequestsTableProps> = ({
 
   const handleReject = async (requestId: string) => {
     try {
-      const result = await firebaseService.updatePaymentRequest(requestId, { 
+      const result = await supabaseService.updatePaymentRequest(requestId, { 
         status: 'rejected',
         approved_at: new Date().toISOString()
       });

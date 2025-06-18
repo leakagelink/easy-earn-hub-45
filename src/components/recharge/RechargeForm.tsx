@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useSupabaseAuth } from '@/contexts/auth';
-import { firebaseService } from '@/services/firebaseService';
+import { supabaseService } from '@/services/supabaseService';
 import QuickAmountButtons from './QuickAmountButtons';
 import PaymentInstructions from './PaymentInstructions';
 
@@ -51,8 +51,8 @@ const RechargeForm = () => {
     setIsSubmitting(true);
 
     try {
-      // Create recharge request in Firebase
-      const result = await firebaseService.createTransaction({
+      // Create recharge request using Supabase
+      const result = await supabaseService.createTransaction({
         userId: currentUser.id,
         type: 'recharge_request',
         amount: rechargeAmount,
