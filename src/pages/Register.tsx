@@ -6,11 +6,16 @@ import Footer from '@/components/Footer';
 
 const Register = () => {
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <Header />
       
-      <main className="flex-grow container mx-auto px-4 py-8 mb-16 md:mb-0">
-        <div className="max-w-md mx-auto">
+      <main className="pt-20 pb-8 px-4">
+        <div className="container mx-auto max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Join EasyEarn</h1>
+            <p className="text-gray-600">Create your account and start earning today</p>
+          </div>
+          
           <ClerkAuthForm mode="register" />
         </div>
       </main>
