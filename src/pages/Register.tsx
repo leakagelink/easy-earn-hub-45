@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import AuthForm from '@/components/AuthForm';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import NetworkDiagnostics from '@/components/NetworkDiagnostics';
 
 const Register = () => {
   const location = useLocation();
@@ -21,6 +22,7 @@ const Register = () => {
       </main>
       
       <Footer />
+      <NetworkDiagnostics />
     </div>
   );
 };

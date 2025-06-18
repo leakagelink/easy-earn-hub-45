@@ -1,13 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RefreshCw, CheckCircle, AlertCircle, Wifi, WifiOff } from 'lucide-react';
+import { RefreshCw, CheckCircle, AlertCircle, Wifi, WifiOff, Zap, Globe } from 'lucide-react';
 import { enhancedRegister, enhancedLogin } from '@/utils/authUtils';
 import { testSupabaseConnection } from '@/integrations/supabase/client';
+import { testNetworkQuality } from '@/utils/networkUtils';
 
 interface AuthFormProps {
   mode: 'login' | 'register';
@@ -21,49 +21,67 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected' | 'network-issue'>('checking');
   const [retryCount, setRetryCount] = useState(0);
   const [debugMode, setDebugMode] = useState(false);
+  const [networkQuality, setNetworkQuality] = useState<any>(null);
+  const [lastError, setLastError] = useState<string>('');
   
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Enhanced connection monitoring
+  // POWERFUL connection monitoring
   useEffect(() => {
-    const checkConnection = async () => {
+    const runDiagnostics = async () => {
       try {
-        console.log('🔄 Enhanced connection test...');
-        const result = await testSupabaseConnection();
+        console.log('🔄 RUNNING POWERFUL DIAGNOSTICS...');
         
-        if (result.success) {
-          console.log('✅ Connection successful');
+        // Test network quality first
+        const networkTest = await testNetworkQuality();
+        setNetworkQuality(networkTest);
+        console.log('🌐 Network test result:', networkTest);
+        
+        // Test Supabase connection
+        const supabaseTest = await testSupabaseConnection();
+        console.log('🎯 Supabase test result:', supabaseTest);
+        
+        if (networkTest.canReachSupabase && supabaseTest.success) {
+          console.log('✅ ALL SYSTEMS OPERATIONAL');
           setConnectionStatus('connected');
+          setLastError('');
+        } else if (!networkTest.canReachSupabase) {
+          console.error('❌ NETWORK ISSUE DETECTED');
+          setConnectionStatus('network-issue');
+          setLastError(networkTest.error || 'Network connectivity issue');
         } else {
-          console.error('❌ Connection failed:', result.error);
+          console.error('❌ SUPABASE ISSUE DETECTED');
           setConnectionStatus('disconnected');
+          setLastError(supabaseTest.error || 'Supabase connection issue');
         }
-      } catch (error) {
-        console.error('💥 Connection test error:', error);
+      } catch (error: any) {
+        console.error('💥 DIAGNOSTICS FAILED:', error);
         setConnectionStatus('disconnected');
+        setLastError(error.message);
       }
     };
     
-    checkConnection();
+    runDiagnostics();
     
-    // Check connection every 30 seconds
-    const interval = setInterval(checkConnection, 30000);
+    // Check every 30 seconds
+    const interval = setInterval(runDiagnostics, 30000);
     return () => clearInterval(interval);
   }, []);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('📋 Form submission:', { 
+    console.log('📋 POWERFUL FORM SUBMISSION:', { 
       mode, 
       email, 
       phone, 
       connectionStatus, 
       retryCount,
+      networkQuality: networkQuality?.speed,
       timestamp: new Date().toISOString()
     });
     
@@ -107,24 +125,25 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     }
     
     setIsLoading(true);
+    setLastError('');
     
     try {
       let result;
       
       if (mode === 'login') {
-        console.log('🔑 Starting enhanced login...');
+        console.log('🔑 STARTING POWERFUL LOGIN...');
         result = await enhancedLogin(email, password);
       } else {
-        console.log('📝 Starting enhanced registration...');
+        console.log('📝 STARTING POWERFUL REGISTRATION...');
         result = await enhancedRegister(email, password, phone, referralCode);
       }
       
-      console.log('📊 Auth result:', result);
+      console.log('📊 AUTH RESULT:', result);
       
       if (result.success) {
         toast({
           title: mode === 'login' ? "🎉 Login Successful!" : "🎉 Registration Successful!",
-          description: mode === 'login' ? "आपका login हो गया है।" : "Account बन गया है! अब login करें।",
+          description: mode === 'login' ? "Welcome back!" : "Account successfully created!",
         });
         
         if (mode === 'login') {
@@ -134,9 +153,10 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         }
         
         setRetryCount(0);
+        setLastError('');
       } else {
-        // Handle failure with detailed error
-        console.error('🚨 Authentication failed:', result.error);
+        console.error('🚨 AUTHENTICATION FAILED:', result.error);
+        setLastError(result.error || 'Unknown error');
         
         toast({
           title: mode === 'login' ? "❌ Login Failed" : "❌ Registration Failed",
@@ -146,12 +166,17 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         
         if (result.needsRetry) {
           setRetryCount(prev => prev + 1);
-          setConnectionStatus('disconnected');
+          if (result.networkIssue) {
+            setConnectionStatus('network-issue');
+          } else {
+            setConnectionStatus('disconnected');
+          }
         }
       }
       
     } catch (error: any) {
-      console.error('💥 Unexpected error in form submission:', error);
+      console.error('💥 UNEXPECTED ERROR in form submission:', error);
+      setLastError(error.message);
       
       toast({
         title: "❌ Unexpected Error",
@@ -165,49 +190,71 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   
   const handleRetry = async () => {
     setConnectionStatus('checking');
-    const result = await testSupabaseConnection();
-    setConnectionStatus(result.success ? 'connected' : 'disconnected');
+    setLastError('');
+    
+    const networkTest = await testNetworkQuality();
+    const supabaseTest = await testSupabaseConnection();
+    
+    setNetworkQuality(networkTest);
+    
+    if (networkTest.canReachSupabase && supabaseTest.success) {
+      setConnectionStatus('connected');
+    } else if (!networkTest.canReachSupabase) {
+      setConnectionStatus('network-issue');
+      setLastError(networkTest.error || 'Network issue');
+    } else {
+      setConnectionStatus('disconnected');
+      setLastError(supabaseTest.error || 'Supabase issue');
+    }
   };
   
   return (
     <div className="mx-auto w-full max-w-md p-6 bg-white rounded-lg shadow-md">
-      {/* Enhanced Connection Status */}
-      <div className={`mb-4 p-3 rounded-md ${
-        connectionStatus === 'connected' ? 'bg-green-50 border border-green-200' :
-        connectionStatus === 'disconnected' ? 'bg-red-50 border border-red-200' :
-        'bg-blue-50 border border-blue-200'
+      {/* POWERFUL Status Display */}
+      <div className={`mb-4 p-4 rounded-md border-2 ${
+        connectionStatus === 'connected' ? 'bg-green-50 border-green-300' :
+        connectionStatus === 'network-issue' ? 'bg-orange-50 border-orange-300' :
+        connectionStatus === 'disconnected' ? 'bg-red-50 border-red-300' :
+        'bg-blue-50 border-blue-300'
       }`}>
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
             {connectionStatus === 'checking' && (
               <>
-                <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />
-                <span className="text-sm text-blue-600 font-medium">Connecting...</span>
+                <RefreshCw className="h-5 w-5 animate-spin text-blue-500" />
+                <span className="text-sm text-blue-700 font-semibold">Testing Connection...</span>
               </>
             )}
             {connectionStatus === 'connected' && (
               <>
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span className="text-sm text-green-600 font-medium">✅ Connected</span>
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <span className="text-sm text-green-700 font-semibold">🚀 System Ready</span>
+              </>
+            )}
+            {connectionStatus === 'network-issue' && (
+              <>
+                <Globe className="h-5 w-5 text-orange-600" />
+                <span className="text-sm text-orange-700 font-semibold">🌐 Network Issue</span>
               </>
             )}
             {connectionStatus === 'disconnected' && (
               <>
-                <AlertCircle className="h-4 w-4 text-red-500" />
-                <span className="text-sm text-red-600 font-medium">❌ Connection Issue</span>
+                <AlertCircle className="h-5 w-5 text-red-600" />
+                <span className="text-sm text-red-700 font-semibold">⚠️ Connection Problem</span>
               </>
             )}
           </div>
           
           <div className="flex items-center space-x-2">
-            {connectionStatus === 'disconnected' && (
+            {connectionStatus !== 'connected' && (
               <Button 
                 size="sm" 
                 variant="outline" 
                 onClick={handleRetry}
                 className="text-xs"
               >
-                Retry
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Fix
               </Button>
             )}
             <Button 
@@ -221,22 +268,43 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
           </div>
         </div>
         
-        {(retryCount > 0 || debugMode) && (
-          <div className="mt-2 text-xs text-gray-600">
-            {retryCount > 0 && <div>Retry attempts: {retryCount}</div>}
-            {debugMode && (
-              <div className="mt-1 p-2 bg-gray-100 rounded text-xs font-mono">
-                URL: {window.location.origin}<br/>
-                Browser: {navigator.userAgent.substring(0, 30)}...<br/>
-                LocalStorage: {Object.keys(localStorage).filter(k => k.includes('supabase')).length} Supabase keys
-              </div>
-            )}
+        {/* Network Quality Display */}
+        {networkQuality && (
+          <div className="mt-2 text-xs">
+            <div className="flex items-center space-x-2">
+              {networkQuality.speed === 'fast' && <Zap className="h-3 w-3 text-green-500" />}
+              {networkQuality.speed === 'slow' && <Wifi className="h-3 w-3 text-yellow-500" />}
+              {networkQuality.speed === 'offline' && <WifiOff className="h-3 w-3 text-red-500" />}
+              <span className={networkQuality.canReachSupabase ? 'text-green-600' : 'text-red-600'}>
+                Network: {networkQuality.speed} ({networkQuality.latency}ms)
+                {networkQuality.canReachSupabase ? ' ✅' : ' ❌'}
+              </span>
+            </div>
+          </div>
+        )}
+        
+        {/* Error Display */}
+        {lastError && (
+          <div className="mt-2 p-2 bg-red-100 rounded text-xs text-red-700">
+            <strong>Error:</strong> {lastError}
+          </div>
+        )}
+        
+        {/* Debug Info */}
+        {debugMode && (
+          <div className="mt-3 p-3 bg-gray-100 rounded text-xs font-mono">
+            <div><strong>URL:</strong> {window.location.origin}</div>
+            <div><strong>Retry Count:</strong> {retryCount}</div>
+            <div><strong>Browser:</strong> {navigator.userAgent.substring(0, 30)}...</div>
+            <div><strong>Online:</strong> {navigator.onLine ? 'Yes' : 'No'}</div>
+            <div><strong>Cookies:</strong> {navigator.cookieEnabled ? 'Enabled' : 'Disabled'}</div>
+            <div><strong>Storage Keys:</strong> {Object.keys(localStorage).filter(k => k.includes('supabase')).length}</div>
           </div>
         )}
       </div>
 
       <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
-        {mode === 'login' ? 'Login करें' : 'नया Account बनाएं'}
+        {mode === 'login' ? '🔑 Login करें' : '📝 नया Account बनाएं'}
       </h2>
       
       {selectedPlan && (
@@ -321,7 +389,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         <Button 
           type="submit" 
           className="w-full bg-easyearn-purple hover:bg-easyearn-darkpurple text-white font-medium py-3"
-          disabled={isLoading}
+          disabled={isLoading || connectionStatus !== 'connected'}
         >
           {isLoading ? (
             <span className="flex items-center justify-center">
@@ -353,12 +421,12 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       </div>
       
       <div className="mt-6 text-center">
-        <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
-          <p className="text-xs text-blue-700 font-medium">
-            🔧 Enhanced Authentication System
+        <div className="p-3 bg-green-50 rounded-md border border-green-200">
+          <p className="text-xs text-green-700 font-medium">
+            🔧 POWERFUL Authentication System
           </p>
-          <p className="text-xs text-blue-600 mt-1">
-            Connection monitoring, retry mechanism, और detailed error handling के साथ!
+          <p className="text-xs text-green-600 mt-1">
+            Network diagnostics, retry mechanism, aur detailed error handling के साथ!
           </p>
         </div>
       </div>

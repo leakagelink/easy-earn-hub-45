@@ -1,26 +1,82 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { retryWithExponentialBackoff, testNetworkQuality } from './networkUtils';
 
 export interface AuthResult {
   success: boolean;
   error?: string;
   needsRetry?: boolean;
+  networkIssue?: boolean;
 }
 
-// Simplified and robust registration function
+// Powerful cleanup function
+const powerfulAuthCleanup = async () => {
+  try {
+    console.log('🧹 POWERFUL AUTH CLEANUP Starting...');
+    
+    // Clear ALL possible auth keys
+    const allKeys = Object.keys(localStorage);
+    const authKeys = allKeys.filter(key => 
+      key.startsWith('supabase.auth.') || 
+      key.includes('sb-') ||
+      key.includes('auth.') ||
+      key.includes('session')
+    );
+    
+    console.log('🗑️ Removing auth keys:', authKeys);
+    authKeys.forEach(key => localStorage.removeItem(key));
+    
+    // Also clear sessionStorage
+    const sessionKeys = Object.keys(sessionStorage || {});
+    const authSessionKeys = sessionKeys.filter(key => 
+      key.startsWith('supabase.') || key.includes('auth')
+    );
+    authSessionKeys.forEach(key => sessionStorage.removeItem(key));
+    
+    // Force signout (don't wait for it to complete)
+    try {
+      await Promise.race([
+        supabase.auth.signOut({ scope: 'global' }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000))
+      ]);
+      console.log('✅ Global signout completed');
+    } catch (e) {
+      console.log('⚠️ Signout timeout/error - continuing anyway');
+    }
+    
+    console.log('✅ POWERFUL CLEANUP Complete');
+  } catch (error) {
+    console.error('❌ Cleanup error (continuing anyway):', error);
+  }
+};
+
+// Enhanced registration with network diagnostics
 export const enhancedRegister = async (
   email: string, 
   password: string, 
   phone: string, 
   referralCode?: string
 ): Promise<AuthResult> => {
-  console.log('🚀 Starting registration for:', email);
+  console.log('🚀 ENHANCED REGISTRATION Starting for:', email);
   
   try {
-    // Clean up any existing auth state first
-    await cleanupAuthState();
+    // First test network quality
+    const networkTest = await testNetworkQuality();
+    console.log('🌐 Network quality:', networkTest);
     
-    // Basic validation
+    if (!networkTest.canReachSupabase) {
+      return { 
+        success: false, 
+        error: 'Supabase server तक नहीं पहुंच पा रहे। Internet या Supabase configuration check करें।',
+        networkIssue: true,
+        needsRetry: true
+      };
+    }
+    
+    // Cleanup first
+    await powerfulAuthCleanup();
+    
+    // Validation
     if (!email.includes('@')) {
       return { success: false, error: 'सही email address डालें।' };
     }
@@ -33,39 +89,40 @@ export const enhancedRegister = async (
       return { success: false, error: 'सही phone number डालें।' };
     }
 
-    console.log('✅ Validation passed, attempting Supabase registration...');
+    console.log('✅ Validation passed, attempting registration with retry...');
 
-    // Direct Supabase registration call with proper redirect URL
-    const { data, error } = await supabase.auth.signUp({
-      email: email.trim().toLowerCase(),
-      password: password.trim(),
-      options: {
-        emailRedirectTo: `${window.location.origin}/`,
-        data: {
-          phone: phone.trim(),
-          referral_code: referralCode?.trim() || '',
+    // Registration with retry mechanism
+    const result = await retryWithExponentialBackoff(async () => {
+      return await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            phone: phone.trim(),
+            referral_code: referralCode?.trim() || '',
+          }
         }
-      }
-    });
+      });
+    }, 3, 1000);
 
-    if (error) {
-      console.error('❌ Supabase registration error:', error);
+    if (result.error) {
+      console.error('❌ Registration error:', result.error);
       return { 
         success: false, 
-        error: getHindiErrorMessage(error),
-        needsRetry: shouldRetryError(error)
+        error: getHindiErrorMessage(result.error),
+        needsRetry: shouldRetryError(result.error)
       };
     }
 
-    if (data.user) {
-      console.log('✅ Registration successful:', data.user.email);
+    if (result.data.user) {
+      console.log('✅ Registration successful:', result.data.user.email);
       
-      // Check if email confirmation is required
-      if (!data.session) {
-        console.log('📧 Email confirmation required');
+      if (!result.data.session) {
+        console.log('📧 Email confirmation required or signup complete');
         return { 
           success: true, 
-          error: 'Account बन गया है! Email check करें या direct login करें।' 
+          error: 'Account बन गया है! अब login करें।' 
         };
       }
     }
@@ -73,77 +130,69 @@ export const enhancedRegister = async (
     return { success: true };
 
   } catch (error: any) {
-    console.error('💥 Registration failed:', error);
+    console.error('💥 Registration completely failed:', error);
     return { 
       success: false, 
       error: getHindiErrorMessage(error),
-      needsRetry: shouldRetryError(error)
+      needsRetry: shouldRetryError(error),
+      networkIssue: error.name === 'TypeError' && error.message.includes('fetch')
     };
   }
 };
 
-// Simplified and robust login function
+// Enhanced login with network diagnostics
 export const enhancedLogin = async (email: string, password: string): Promise<AuthResult> => {
-  console.log('🔑 Starting login for:', email);
+  console.log('🔑 ENHANCED LOGIN Starting for:', email);
   
   try {
-    // Clean up any existing auth state first
-    await cleanupAuthState();
+    // Network test first
+    const networkTest = await testNetworkQuality();
+    console.log('🌐 Network quality:', networkTest);
     
-    console.log('✅ Starting Supabase login...');
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
-      password: password.trim(),
-    });
-
-    if (error) {
-      console.error('❌ Supabase login error:', error);
+    if (!networkTest.canReachSupabase) {
       return { 
         success: false, 
-        error: getHindiErrorMessage(error),
-        needsRetry: shouldRetryError(error)
+        error: 'Supabase server तक नहीं पहुंच पा रहे। Site URL configuration check करें।',
+        networkIssue: true,
+        needsRetry: true
+      };
+    }
+    
+    // Cleanup first
+    await powerfulAuthCleanup();
+    
+    console.log('✅ Starting login with retry mechanism...');
+
+    const result = await retryWithExponentialBackoff(async () => {
+      return await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
+      });
+    }, 3, 1000);
+
+    if (result.error) {
+      console.error('❌ Login error:', result.error);
+      return { 
+        success: false, 
+        error: getHindiErrorMessage(result.error),
+        needsRetry: shouldRetryError(result.error)
       };
     }
 
-    if (data.user) {
-      console.log('✅ Login successful:', data.user.email);
+    if (result.data.user) {
+      console.log('✅ Login successful:', result.data.user.email);
     }
 
     return { success: true };
 
   } catch (error: any) {
-    console.error('💥 Login failed:', error);
+    console.error('💥 Login completely failed:', error);
     return { 
       success: false, 
       error: getHindiErrorMessage(error),
-      needsRetry: shouldRetryError(error)
+      needsRetry: shouldRetryError(error),
+      networkIssue: error.name === 'TypeError' && error.message.includes('fetch')
     };
-  }
-};
-
-// Clean auth state utility
-const cleanupAuthState = async () => {
-  try {
-    console.log('🧹 Cleaning up auth state...');
-    
-    // Clear all auth-related localStorage keys
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-        localStorage.removeItem(key);
-      }
-    });
-    
-    // Attempt global signout
-    try {
-      await supabase.auth.signOut({ scope: 'global' });
-    } catch (e) {
-      console.log('Signout attempt completed (may have been already signed out)');
-    }
-    
-    console.log('✅ Auth state cleaned');
-  } catch (error) {
-    console.error('❌ Auth cleanup failed:', error);
   }
 };
 
@@ -152,16 +201,20 @@ const getHindiErrorMessage = (error: any): string => {
   const message = error.message || error.toString();
   console.log('🔍 Error analysis:', { message, code: error.code, status: error.status });
   
-  // Network and connection errors
-  if (message.includes('fetch') || message.includes('NetworkError') || message.includes('Failed to fetch')) {
-    return 'इंटरनेट connection check करें। Network की समस्या है।';
+  // Network specific errors
+  if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
+    return 'Network connection failed। Internet check करें या VPN try करें।';
   }
   
   if (message.includes('CORS') || message.includes('cross-origin')) {
-    return 'Technical error हुई है। Page refresh करके फिर कोशिश करें।';
+    return 'Server configuration issue। Supabase Dashboard में Site URL correct करें।';
   }
   
-  // Authentication errors
+  if (message.includes('fetch')) {
+    return 'Server connection failed। Browser refresh करके फिर try करें।';
+  }
+  
+  // Auth specific errors
   if (message.includes('Invalid login credentials')) {
     return 'गलत email या password है। सही details डालें।';
   }
@@ -171,26 +224,25 @@ const getHindiErrorMessage = (error: any): string => {
   }
   
   if (message.includes('Email not confirmed')) {
-    return 'Account बन गया है! अब login कर सकते हैं।';
+    return 'Account बन गया है! अब login करें।';
   }
   
   if (message.includes('signup is disabled')) {
     return 'Registration temporarily बंद है। बाद में कोशिश करें।';
   }
   
-  if (message.includes('rate limit')) {
+  if (message.includes('rate limit') || message.includes('too many')) {
     return 'बहुत जल्दी try कर रहे हैं। 2 मिनट बाद कोशिश करें।';
   }
   
-  // Server errors
   if (message.includes('500') || message.includes('Internal Server Error')) {
     return 'Server में समस्या है। बाद में कोशिश करें।';
   }
   
-  return `तकनीकी समस्या: ${message}। Page refresh करके फिर कोशिश करें।`;
+  return `Technical issue: ${message}। Support team से संपर्क करें।`;
 };
 
-// Determine if error should trigger retry
+// Determine retry logic
 const shouldRetryError = (error: any): boolean => {
   const message = error.message || '';
   
