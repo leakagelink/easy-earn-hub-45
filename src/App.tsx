@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import BottomBar from "./components/BottomBar";
-import { initializeAuth } from "./utils/simpleAuth";
+import { initializeFirebaseAuth } from "./utils/firebaseAuth";
 
 // Pages
 import Index from "./pages/Index";
@@ -51,9 +51,9 @@ const MaintenanceCheck = ({ children }: { children: React.ReactNode }) => {
 
 // AppRoutes component that contains all routes
 const AppRoutes = () => {
-  // Initialize auth system on app start
+  // Initialize Firebase auth system on app start
   React.useEffect(() => {
-    initializeAuth();
+    initializeFirebaseAuth();
   }, []);
   
   return (

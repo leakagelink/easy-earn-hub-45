@@ -1,20 +1,44 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { getCurrentAuth, logoutUser, isAdmin } from '@/utils/simpleAuth';
+import { getCurrentAuth, logoutUser, isAdmin, onAuthStateChange, FirebaseUser } from '@/utils/firebaseAuth';
 
 const SimpleAuthButton = () => {
   const navigate = useNavigate();
-  const auth = getCurrentAuth();
-  const userIsAdmin = isAdmin();
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleLogout = () => {
-    logoutUser();
-    navigate('/');
+  useEffect(() => {
+    const unsubscribe = onAuthStateChange((firebaseUser) => {
+      setUser(firebaseUser);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      setUser(null);
+      navigate('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
-  if (auth?.isLoggedIn) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center space-x-2">
+        <div className="h-8 w-16 bg-gray-200 animate-pulse rounded"></div>
+      </div>
+    );
+  }
+
+  if (user) {
+    const userIsAdmin = isAdmin();
+    
     return (
       <div className="flex items-center">
         <Link to={userIsAdmin ? "/admin" : "/dashboard"}>

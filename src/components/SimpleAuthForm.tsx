@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
-import { registerUser, loginUser } from '@/utils/simpleAuth';
+import { registerUser, loginUser, resetPassword } from '@/utils/firebaseAuth';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,7 @@ const SimpleAuthForm: React.FC<SimpleAuthFormProps> = ({ mode, selectedPlan }) =
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -41,8 +42,8 @@ const SimpleAuthForm: React.FC<SimpleAuthFormProps> = ({ mode, selectedPlan }) =
       return;
     }
     
-    if (!password || password.length < 8) {
-      toast({ title: "Password कम से कम 8 characters का होना चाहिए", variant: "destructive" });
+    if (!password || password.length < 6) {
+      toast({ title: "Password कम से कम 6 characters का होना चाहिए", variant: "destructive" });
       return;
     }
     
@@ -80,6 +81,31 @@ const SimpleAuthForm: React.FC<SimpleAuthFormProps> = ({ mode, selectedPlan }) =
     } catch (error: any) {
       toast({
         title: mode === 'login' ? "❌ Login Failed" : "❌ Registration Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email || !validateEmail(email)) {
+      toast({ title: "पहले valid email address डालें", variant: "destructive" });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await resetPassword(email);
+      toast({
+        title: "✅ Password reset email भेजा गया!",
+        description: "अपना email check करें"
+      });
+      setShowForgotPassword(false);
+    } catch (error: any) {
+      toast({
+        title: "❌ Password reset failed",
         description: error.message,
         variant: "destructive"
       });
@@ -163,6 +189,34 @@ const SimpleAuthForm: React.FC<SimpleAuthFormProps> = ({ mode, selectedPlan }) =
           {isLoading ? 'Processing...' : (mode === 'login' ? 'Login करें' : 'Register करें')}
         </Button>
         
+        {mode === 'login' && (
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={() => setShowForgotPassword(!showForgotPassword)}
+              className="text-sm text-easyearn-purple hover:underline"
+            >
+              Password भूल गए?
+            </button>
+          </div>
+        )}
+
+        {showForgotPassword && mode === 'login' && (
+          <div className="mt-4 p-4 bg-gray-50 rounded-md">
+            <p className="text-sm text-gray-600 mb-2">
+              Password reset के लिए email भेजेंगे
+            </p>
+            <Button
+              type="button"
+              onClick={handleForgotPassword}
+              className="w-full bg-blue-500 hover:bg-blue-600"
+              disabled={isLoading}
+            >
+              Reset Password Email भेजें
+            </Button>
+          </div>
+        )}
+        
         <div className="text-center mt-4">
           {mode === 'login' ? (
             <p className="text-sm text-gray-600">
@@ -182,6 +236,9 @@ const SimpleAuthForm: React.FC<SimpleAuthFormProps> = ({ mode, selectedPlan }) =
             <p><strong>Admin Credentials:</strong></p>
             <p>Email: admin@easyearn.us</p>
             <p>Password: Easy@123</p>
+            <p className="text-xs mt-1 text-orange-600">
+              Note: Admin को पहले Firebase में register करना होगा
+            </p>
           </div>
         </div>
       )}
