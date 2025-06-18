@@ -2,11 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
-import { useSupabaseAuth } from '@/contexts/auth/SupabaseAuthProvider';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RefreshCw, Wifi, WifiOff, CheckCircle } from 'lucide-react';
+import { RefreshCw, Wifi, WifiOff, CheckCircle, AlertCircle } from 'lucide-react';
+import { enhancedRegister, enhancedLogin } from '@/utils/authUtils';
+import { testSupabaseConnection } from '@/utils/connectionUtils';
 
 interface AuthFormProps {
   mode: 'login' | 'register';
@@ -21,41 +22,42 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const [referralCode, setReferralCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
+  const [retryCount, setRetryCount] = useState(0);
   
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { login, register } = useSupabaseAuth();
 
-  // Enhanced connection check
+  // Enhanced connection monitoring
   useEffect(() => {
     const checkConnection = async () => {
       try {
-        console.log('🔄 Testing Supabase connection...');
-        const { supabase } = await import('@/integrations/supabase/client');
+        console.log('🔄 Testing enhanced connection...');
+        const result = await testSupabaseConnection();
         
-        // Test with a simple auth check
-        const { data, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('❌ Connection test failed:', error);
-          setConnectionStatus('disconnected');
-        } else {
-          console.log('✅ Supabase connected successfully');
+        if (result.isConnected) {
+          console.log('✅ Connection successful');
           setConnectionStatus('connected');
+        } else {
+          console.error('❌ Connection failed:', result.error);
+          setConnectionStatus('disconnected');
         }
       } catch (error) {
-        console.error('💥 Connection error:', error);
+        console.error('💥 Connection test error:', error);
         setConnectionStatus('disconnected');
       }
     };
     
     checkConnection();
+    
+    // Periodic connection check
+    const interval = setInterval(checkConnection, 30000);
+    return () => clearInterval(interval);
   }, []);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('📋 Form submission started:', { mode, email, phone, connectionStatus });
+    console.log('📋 Enhanced form submission:', { mode, email, phone, connectionStatus, retryCount });
     
     // Basic validation
     if (!email || !email.includes('@')) {
@@ -99,58 +101,51 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     setIsLoading(true);
     
     try {
+      let result;
+      
       if (mode === 'login') {
-        console.log('🔑 Starting login process...');
-        await login(email, password);
-        
-        toast({
-          title: "🎉 Login Successful!",
-          description: "आपका login हो गया है।",
-        });
-        
-        navigate('/invest');
+        console.log('🔑 Starting enhanced login...');
+        result = await enhancedLogin(email, password);
       } else {
-        console.log('📝 Starting registration process...');
-        await register(email, password, phone, referralCode);
-        
+        console.log('📝 Starting enhanced registration...');
+        result = await enhancedRegister(email, password, phone, referralCode);
+      }
+      
+      if (result.success) {
         toast({
-          title: "🎉 Registration Successful!",
-          description: "Account बन गया है! अब login करें।",
+          title: mode === 'login' ? "🎉 Login Successful!" : "🎉 Registration Successful!",
+          description: mode === 'login' ? "आपका login हो गया है।" : "Account बन गया है! अब login करें।",
         });
         
-        // Auto redirect to login after success
-        setTimeout(() => {
-          navigate('/login');
-        }, 2000);
+        if (mode === 'login') {
+          navigate('/invest');
+        } else {
+          setTimeout(() => {
+            navigate('/login');
+          }, 2000);
+        }
+        
+        setRetryCount(0);
+      } else {
+        // Handle failure
+        toast({
+          title: mode === 'login' ? "❌ Login Failed" : "❌ Registration Failed",
+          description: result.error || 'कुछ तकनीकी समस्या है।',
+          variant: "destructive"
+        });
+        
+        if (result.needsRetry) {
+          setRetryCount(prev => prev + 1);
+          setConnectionStatus('disconnected');
+        }
       }
+      
     } catch (error: any) {
-      console.error('💥 Auth error details:', {
-        message: error.message,
-        code: error.code,
-        status: error.status,
-        details: error
-      });
-      
-      let errorMessage = 'कुछ तकनीकी समस्या है। फिर से कोशिश करें।';
-      
-      if (error.message?.includes('Invalid login credentials')) {
-        errorMessage = 'गलत email या password है।';
-      } else if (error.message?.includes('User already registered')) {
-        errorMessage = 'यह email पहले से registered है। Login करें।';
-      } else if (error.message?.includes('Email not confirmed')) {
-        errorMessage = 'Account बन गया है! अब login कर सकते हैं।';
-      } else if (error.message?.includes('signup is disabled')) {
-        errorMessage = 'Registration temporarily बंद है।';
-      } else if (error.message?.includes('rate limit')) {
-        errorMessage = 'बहुत जल्दी try कर रहे हैं। 2 मिनट बाद कोशिश करें।';
-      } else if (error.message?.includes('fetch') || error.message?.includes('NetworkError')) {
-        errorMessage = 'Internet connection check करें।';
-        setConnectionStatus('disconnected');
-      }
+      console.error('💥 Unexpected error:', error);
       
       toast({
-        title: mode === 'login' ? "❌ Login Failed" : "❌ Registration Failed",
-        description: errorMessage,
+        title: "❌ Unexpected Error",
+        description: "कुछ अनपेक्षित समस्या है। फिर से कोशिश करें।",
         variant: "destructive"
       });
     } finally {
@@ -158,34 +153,59 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     }
   };
   
+  const handleRetry = async () => {
+    setConnectionStatus('checking');
+    const result = await testSupabaseConnection();
+    setConnectionStatus(result.isConnected ? 'connected' : 'disconnected');
+  };
+  
   return (
     <div className="mx-auto w-full max-w-md p-6 bg-white rounded-lg shadow-md">
       {/* Enhanced Connection Status */}
-      <div className={`mb-4 p-3 rounded-md text-center ${
+      <div className={`mb-4 p-3 rounded-md ${
         connectionStatus === 'connected' ? 'bg-green-50 border border-green-200' :
         connectionStatus === 'disconnected' ? 'bg-red-50 border border-red-200' :
         'bg-blue-50 border border-blue-200'
       }`}>
-        <div className="flex items-center justify-center space-x-2">
-          {connectionStatus === 'checking' && (
-            <>
-              <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />
-              <span className="text-sm text-blue-600 font-medium">Connecting...</span>
-            </>
-          )}
-          {connectionStatus === 'connected' && (
-            <>
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              <span className="text-sm text-green-600 font-medium">✅ Connected & Ready</span>
-            </>
-          )}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            {connectionStatus === 'checking' && (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />
+                <span className="text-sm text-blue-600 font-medium">Connecting...</span>
+              </>
+            )}
+            {connectionStatus === 'connected' && (
+              <>
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                <span className="text-sm text-green-600 font-medium">✅ Connected</span>
+              </>
+            )}
+            {connectionStatus === 'disconnected' && (
+              <>
+                <AlertCircle className="h-4 w-4 text-red-500" />
+                <span className="text-sm text-red-600 font-medium">❌ Connection Issue</span>
+              </>
+            )}
+          </div>
+          
           {connectionStatus === 'disconnected' && (
-            <>
-              <WifiOff className="h-4 w-4 text-red-500" />
-              <span className="text-sm text-red-600 font-medium">❌ Connection Issue</span>
-            </>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={handleRetry}
+              className="text-xs"
+            >
+              Retry
+            </Button>
           )}
         </div>
+        
+        {retryCount > 0 && (
+          <div className="mt-2 text-xs text-gray-600">
+            Retry attempts: {retryCount}
+          </div>
+        )}
       </div>
 
       <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
@@ -306,12 +326,12 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       </div>
       
       <div className="mt-6 text-center">
-        <div className="p-3 bg-green-50 rounded-md border border-green-200">
-          <p className="text-xs text-green-700 font-medium">
-            ✅ Supabase Configuration Updated
+        <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
+          <p className="text-xs text-blue-700 font-medium">
+            🔧 Enhanced Authentication System
           </p>
-          <p className="text-xs text-green-600 mt-1">
-            अब registration और login perfect काम करेगा!
+          <p className="text-xs text-blue-600 mt-1">
+            Connection monitoring, retry mechanism, और detailed error handling के साथ!
           </p>
         </div>
       </div>
