@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -7,23 +8,28 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { getCurrentAuth } from '@/utils/simpleAuth';
+import { onAuthStateChange, FirebaseUser } from '@/utils/firebaseAuth';
 import { useToast } from '@/components/ui/use-toast';
 
 const Payment = () => {
   const navigate = useNavigate();
-  const auth = getCurrentAuth();
   const { toast } = useToast();
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const [transactionId, setTransactionId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('upi');
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    if (!auth?.isLoggedIn) {
-      navigate('/login');
-      return;
-    }
+    const unsubscribe = onAuthStateChange((firebaseUser) => {
+      if (!firebaseUser) {
+        navigate('/login');
+        return;
+      }
+      setUser(firebaseUser);
+      setIsLoading(false);
+    });
 
     const planData = localStorage.getItem('selectedPlan');
     if (!planData) {
@@ -32,10 +38,12 @@ const Payment = () => {
     }
 
     setSelectedPlan(JSON.parse(planData));
-  }, [auth, navigate]);
+
+    return () => unsubscribe();
+  }, [navigate]);
 
   const handlePayment = async () => {
-    if (!auth?.isLoggedIn || !selectedPlan) return;
+    if (!user || !selectedPlan) return;
 
     if (!transactionId.trim()) {
       toast({
@@ -71,8 +79,16 @@ const Payment = () => {
     }
   };
 
-  if (!selectedPlan) {
-    return <div>Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!selectedPlan || !user) {
+    return null;
   }
 
   return (

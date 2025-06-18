@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import AdminDashboard from '../components/AdminDashboard';
 import { useNavigate } from 'react-router-dom';
@@ -7,19 +7,29 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { getCurrentAuth, loginUser, isAdmin } from '@/utils/simpleAuth';
+import { onAuthStateChange, loginUser, isAdmin, FirebaseUser } from '@/utils/firebaseAuth';
 
 const Admin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const auth = getCurrentAuth();
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChange((firebaseUser) => {
+      setUser(firebaseUser);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsSubmitting(true);
     
     try {
       await loginUser(email, password);
@@ -44,12 +54,20 @@ const Admin = () => {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">Loading...</div>
+      </div>
+    );
+  }
+
   // Check if user is admin
-  const userIsAdmin = auth?.isLoggedIn && isAdmin();
+  const userIsAdmin = user && isAdmin();
   
   if (!userIsAdmin) {
     return (
@@ -92,9 +110,9 @@ const Admin = () => {
             <Button 
               type="submit" 
               className="w-full bg-easyearn-purple hover:bg-easyearn-darkpurple"
-              disabled={isLoading}
+              disabled={isSubmitting}
             >
-              {isLoading ? 'Login हो रहा है...' : 'Admin Login'}
+              {isSubmitting ? 'Login हो रहा है...' : 'Admin Login'}
             </Button>
           </form>
           

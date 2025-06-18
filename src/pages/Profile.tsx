@@ -9,12 +9,13 @@ import { useToast } from "@/components/ui/use-toast";
 import { User, Mail, Phone, Key } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { getCurrentAuth } from '@/utils/simpleAuth';
+import { onAuthStateChange, FirebaseUser } from '@/utils/firebaseAuth';
 
 const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const auth = getCurrentAuth();
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -26,13 +27,19 @@ const Profile = () => {
   
   // Check if user is logged in
   useEffect(() => {
-    if (!auth?.isLoggedIn) {
-      navigate('/login');
-    } else {
-      setEmail(auth.user.email || '');
-      setPhone(auth.user.phone || '');
-    }
-  }, [auth, navigate]);
+    const unsubscribe = onAuthStateChange((firebaseUser) => {
+      if (!firebaseUser) {
+        navigate('/login');
+      } else {
+        setUser(firebaseUser);
+        setEmail(firebaseUser.email || '');
+        setPhone(firebaseUser.phone || '');
+      }
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [navigate]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +56,7 @@ const Profile = () => {
     
     try {
       // For now, just show success message
-      // In real implementation, you would update localStorage
+      // In real implementation, you would update Firebase user profile
       toast({
         title: "Profile updated successfully",
       });
@@ -113,12 +120,16 @@ const Profile = () => {
     }
   };
 
-  if (!auth?.isLoggedIn) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">Loading...</div>
       </div>
     );
+  }
+
+  if (!user) {
+    return null;
   }
   
   return (

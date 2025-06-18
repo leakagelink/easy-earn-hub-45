@@ -10,10 +10,13 @@ import { useToast } from "@/components/ui/use-toast";
 import { Wallet, ArrowDown, BanknoteIcon } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { onAuthStateChange, FirebaseUser } from '@/utils/firebaseAuth';
 
 const Withdraw = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Get current plan - mock data for getting the daily profit
   const currentPlan = localStorage.getItem('userPlan') || '1';
@@ -43,10 +46,16 @@ const Withdraw = () => {
   
   // Check if user is logged in
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    if (!isLoggedIn) {
-      navigate('/login');
-    }
+    const unsubscribe = onAuthStateChange((firebaseUser) => {
+      if (!firebaseUser) {
+        navigate('/login');
+      } else {
+        setUser(firebaseUser);
+      }
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [navigate]);
   
   const handleQuickAmount = (value: number) => {
@@ -116,6 +125,18 @@ const Withdraw = () => {
       navigate('/dashboard');
     }, 1500);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
   
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -284,11 +305,6 @@ const Withdraw = () => {
                     </span>
                   </div>
                 ))}
-                
-                {/* No history message if list is empty */}
-                {/* <div className="text-center p-4 text-gray-500">
-                  No withdrawal history yet
-                </div> */}
               </div>
               
               <div className="mt-6 bg-yellow-50 p-4 rounded-md border border-yellow-200">
