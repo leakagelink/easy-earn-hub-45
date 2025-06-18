@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
@@ -46,7 +45,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         const supabaseTest = await testSupabaseConnection();
         console.log('🎯 Supabase test result:', supabaseTest);
         
-        if (networkTest.canReachSupabase && supabaseTest.success) {
+        if (networkTest.canReachSupabase && supabaseTest.isConnected) {
           console.log('✅ ALL SYSTEMS OPERATIONAL');
           setConnectionStatus('connected');
           setLastError('');
@@ -198,7 +197,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     
     setNetworkQuality(networkTest);
     
-    if (networkTest.canReachSupabase && supabaseTest.success) {
+    if (networkTest.canReachSupabase && supabaseTest.isConnected) {
       setConnectionStatus('connected');
     } else if (!networkTest.canReachSupabase) {
       setConnectionStatus('network-issue');
