@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SupabaseAuthProvider } from "@/contexts/auth/SupabaseAuthProvider";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -28,7 +28,17 @@ import AdminReports from "./pages/admin/AdminReports";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminSecurity from "./pages/admin/AdminSecurity";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+console.log('🚀 EasyEarn App Starting...');
+console.log('🌐 Current URL:', window.location.href);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
