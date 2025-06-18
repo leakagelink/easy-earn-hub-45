@@ -33,9 +33,19 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   const isAdmin = user?.email === 'admin@easyearn.us';
 
   useEffect(() => {
-    console.log('🔑 Starting auth setup...');
+    console.log('🔑 Setting up Supabase auth...');
     
-    // Get current session
+    // Set up auth listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('🔑 Auth event:', event, session?.user?.email || 'None');
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
+    );
+
+    // THEN get current session
     const getSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -53,16 +63,6 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
       }
     };
 
-    // Set up auth listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('🔑 Auth event:', event, session?.user?.email || 'None');
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
-
     getSession();
 
     return () => {
@@ -71,7 +71,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const login = async (email: string, password: string) => {
-    console.log('🔑 Login attempt:', email);
+    console.log('🔑 Login attempt for:', email);
     
     try {
       setLoading(true);
@@ -83,15 +83,11 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
 
       if (error) {
         console.error('❌ Login error:', error);
-        throw new Error(getErrorMessage(error));
+        throw error;
       }
 
       if (data.user) {
-        console.log('✅ Login successful:', data.user.email);
-        toast({
-          title: "✅ Login successful!",
-          description: "आपका login हो गया है।",
-        });
+        console.log('✅ Login successful for:', data.user.email);
       }
 
     } catch (error: any) {
@@ -103,12 +99,12 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   };
 
   const register = async (email: string, password: string, phone: string, referralCode?: string) => {
-    console.log('📝 Registration attempt:', email);
+    console.log('📝 Registration attempt for:', email);
     
     try {
       setLoading(true);
       
-      // Basic validation
+      // Enhanced validation
       if (!email.includes('@')) {
         throw new Error('सही email address डालें।');
       }
@@ -125,6 +121,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
         email: email.trim().toLowerCase(),
         password: password.trim(),
         options: {
+          emailRedirectTo: `${window.location.origin}/`,
           data: {
             phone: phone.trim(),
             referral_code: referralCode?.trim() || '',
@@ -134,15 +131,16 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
 
       if (error) {
         console.error('❌ Registration error:', error);
-        throw new Error(getErrorMessage(error));
+        throw error;
       }
 
       if (data.user) {
-        console.log('✅ Registration successful:', data.user.email);
-        toast({
-          title: "✅ Registration successful!",
-          description: "Account बन गया है! अब login करें।",
-        });
+        console.log('✅ Registration successful for:', data.user.email);
+        
+        // Check if email confirmation is required
+        if (!data.session) {
+          console.log('📧 Email confirmation may be required');
+        }
       }
 
     } catch (error: any) {
@@ -154,7 +152,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   };
 
   const logout = async () => {
-    console.log('🚪 Logout...');
+    console.log('🚪 Logout attempt...');
     
     try {
       setLoading(true);
@@ -167,6 +165,8 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
       // Clear state
       setUser(null);
       setSession(null);
+      
+      console.log('✅ Logout successful');
       
       // Redirect to home
       window.location.href = '/';
@@ -197,33 +197,4 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
       {children}
     </SupabaseAuthContext.Provider>
   );
-}
-
-const getErrorMessage = (error: any): string => {
-  if (!error) return 'कुछ तकनीकी समस्या है।';
-  
-  const message = error.message || error.toString();
-  
-  // Common error translations
-  if (message.includes('Invalid login credentials')) {
-    return 'गलत email या password है।';
-  }
-  
-  if (message.includes('User already registered')) {
-    return 'यह email पहले से registered है। Login करें।';
-  }
-  
-  if (message.includes('Email not confirmed')) {
-    return 'Account बन गया है! अब login कर सकते हैं।';
-  }
-  
-  if (message.includes('signup is disabled')) {
-    return 'Registration temporarily बंद है।';
-  }
-  
-  if (message.includes('rate limit')) {
-    return 'बहुत जल्दी try कर रहे हैं। 2 मिनट बाद कोशिश करें।';
-  }
-  
-  return 'Registration में समस्या है। फिर से कोशिश करें।';
 }
