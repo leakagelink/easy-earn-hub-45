@@ -1,11 +1,14 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
 import { useSupabaseAuth } from '@/contexts/auth/SupabaseAuthProvider';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { retryWithBackoff } from '@/utils/connectionUtils';
+import { getDetailedErrorMessage, shouldRetry } from '@/utils/authErrorHandler';
+import { RefreshCw, Wifi, WifiOff } from 'lucide-react';
 
 interface AuthFormProps {
   mode: 'login' | 'register';
@@ -19,15 +22,41 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
   
   const { toast } = useToast();
   const navigate = useNavigate();
   const { login, register } = useSupabaseAuth();
+
+  // Check connection status on mount
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        const { testSupabaseConnection } = await import('@/integrations/supabase/client');
+        const isConnected = await testSupabaseConnection();
+        setConnectionStatus(isConnected ? 'connected' : 'disconnected');
+      } catch (error) {
+        setConnectionStatus('disconnected');
+      }
+    };
+    
+    checkConnection();
+  }, []);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('📋 Form submission:', { mode, email, phone });
+    console.log('📋 Form submission:', { mode, email, phone, connectionStatus });
+    
+    // Check connection first
+    if (connectionStatus === 'disconnected') {
+      toast({ 
+        title: "⚠️ Connection Problem", 
+        description: "Server से connection नहीं है। Internet check करें।",
+        variant: "destructive" 
+      });
+      return;
+    }
     
     // Basic validation
     if (!email || !email.includes('@')) {
@@ -68,12 +97,20 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     
     try {
       if (mode === 'login') {
-        console.log('🔑 Attempting login...');
-        await login(email, password);
+        console.log('🔑 Attempting login with retry...');
+        
+        await retryWithBackoff(async () => {
+          return await login(email, password);
+        }, 3);
+        
         navigate('/invest');
       } else {
-        console.log('📝 Attempting registration...');
-        await register(email, password, phone, referralCode);
+        console.log('📝 Attempting registration with retry...');
+        
+        await retryWithBackoff(async () => {
+          return await register(email, password, phone, referralCode);
+        }, 3);
+        
         toast({
           title: "✅ Registration successful!",
           description: "Account बन गया है। अब login करें।",
@@ -82,11 +119,19 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       }
     } catch (error: any) {
       console.error('💥 Auth error:', error);
+      
+      const errorMessage = getDetailedErrorMessage(error);
+      
       toast({
         title: mode === 'login' ? "❌ Login Failed" : "❌ Registration Failed",
-        description: error.message || 'कुछ गलत हुआ है। फिर से कोशिश करें।',
+        description: errorMessage,
         variant: "destructive"
       });
+      
+      // Update connection status if it was a network error
+      if (error.message?.includes('fetch') || error.message?.includes('NetworkError')) {
+        setConnectionStatus('disconnected');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -94,6 +139,30 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   
   return (
     <div className="mx-auto w-full max-w-md p-6 bg-white rounded-lg shadow-md">
+      {/* Connection Status Indicator */}
+      <div className="mb-4 p-2 rounded-md text-center">
+        <div className="flex items-center justify-center space-x-2">
+          {connectionStatus === 'checking' && (
+            <>
+              <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />
+              <span className="text-sm text-blue-600">Connecting...</span>
+            </>
+          )}
+          {connectionStatus === 'connected' && (
+            <>
+              <Wifi className="h-4 w-4 text-green-500" />
+              <span className="text-sm text-green-600">Connected</span>
+            </>
+          )}
+          {connectionStatus === 'disconnected' && (
+            <>
+              <WifiOff className="h-4 w-4 text-red-500" />
+              <span className="text-sm text-red-600">Connection Issue</span>
+            </>
+          )}
+        </div>
+      </div>
+
       <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
         {mode === 'login' ? 'अपने account में login करें' : 'नया account बनाएं'}
       </h2>
@@ -175,14 +244,11 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         <Button 
           type="submit" 
           className="w-full bg-easyearn-purple hover:bg-easyearn-darkpurple"
-          disabled={isLoading}
+          disabled={isLoading || connectionStatus === 'disconnected'}
         >
           {isLoading ? (
             <span className="flex items-center">
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
+              <RefreshCw className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" />
               Processing...
             </span>
           ) : (
