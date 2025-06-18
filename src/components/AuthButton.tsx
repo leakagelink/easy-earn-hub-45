@@ -2,26 +2,20 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { useSupabaseAuth } from '@/contexts/auth/SupabaseAuthProvider';
+import { useUser, UserButton } from '@clerk/clerk-react';
 
 const AuthButton = () => {
-  const { currentUser, logout, isAdmin } = useSupabaseAuth();
+  const { isSignedIn, user } = useUser();
 
-  if (currentUser) {
+  if (isSignedIn) {
     return (
-      <div className="flex items-center">
-        <Link to={isAdmin ? "/admin" : "/dashboard"}>
+      <div className="flex items-center space-x-2">
+        <Link to="/dashboard">
           <Button variant="ghost" className="text-gray-700 hover:text-easyearn-purple">
-            {isAdmin ? "Admin Panel" : "Dashboard"}
+            Dashboard
           </Button>
         </Link>
-        <Button 
-          variant="outline" 
-          className="border-easyearn-purple text-easyearn-purple hover:bg-easyearn-purple hover:text-white ml-2"
-          onClick={logout}
-        >
-          Logout
-        </Button>
+        <UserButton afterSignOutUrl="/" />
       </div>
     );
   }
