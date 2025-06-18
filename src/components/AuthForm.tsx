@@ -5,9 +5,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RefreshCw, Wifi, WifiOff, CheckCircle, AlertCircle } from 'lucide-react';
+import { RefreshCw, CheckCircle, AlertCircle, Wifi, WifiOff } from 'lucide-react';
 import { enhancedRegister, enhancedLogin } from '@/utils/authUtils';
-import { testSupabaseConnection } from '@/utils/connectionUtils';
+import { testSupabaseConnection } from '@/integrations/supabase/client';
 
 interface AuthFormProps {
   mode: 'login' | 'register';
@@ -23,6 +23,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
   const [retryCount, setRetryCount] = useState(0);
+  const [debugMode, setDebugMode] = useState(false);
   
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -31,10 +32,10 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   useEffect(() => {
     const checkConnection = async () => {
       try {
-        console.log('🔄 Testing enhanced connection...');
+        console.log('🔄 Enhanced connection test...');
         const result = await testSupabaseConnection();
         
-        if (result.isConnected) {
+        if (result.success) {
           console.log('✅ Connection successful');
           setConnectionStatus('connected');
         } else {
@@ -49,7 +50,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     
     checkConnection();
     
-    // Periodic connection check
+    // Check connection every 30 seconds
     const interval = setInterval(checkConnection, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -57,12 +58,19 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('📋 Enhanced form submission:', { mode, email, phone, connectionStatus, retryCount });
+    console.log('📋 Form submission:', { 
+      mode, 
+      email, 
+      phone, 
+      connectionStatus, 
+      retryCount,
+      timestamp: new Date().toISOString()
+    });
     
-    // Basic validation
+    // Enhanced validation
     if (!email || !email.includes('@')) {
       toast({ 
-        title: "✋ रुकिए!", 
+        title: "✋ Email Error", 
         description: "सही email address डालें",
         variant: "destructive" 
       });
@@ -71,7 +79,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     
     if (!password || password.length < 6) {
       toast({ 
-        title: "✋ रुकिए!", 
+        title: "✋ Password Error", 
         description: "Password कम से कम 6 characters का होना चाहिए",
         variant: "destructive" 
       });
@@ -81,7 +89,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
     if (mode === 'register') {
       if (!phone || phone.length < 10) {
         toast({ 
-          title: "✋ रुकिए!", 
+          title: "✋ Phone Error", 
           description: "सही phone number डालें (10+ digits)",
           variant: "destructive" 
         });
@@ -90,7 +98,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       
       if (password !== confirmPassword) {
         toast({ 
-          title: "✋ रुकिए!", 
+          title: "✋ Password Mismatch", 
           description: "Passwords match नहीं हो रहे",
           variant: "destructive" 
         });
@@ -111,6 +119,8 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         result = await enhancedRegister(email, password, phone, referralCode);
       }
       
+      console.log('📊 Auth result:', result);
+      
       if (result.success) {
         toast({
           title: mode === 'login' ? "🎉 Login Successful!" : "🎉 Registration Successful!",
@@ -118,16 +128,16 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         });
         
         if (mode === 'login') {
-          navigate('/invest');
+          setTimeout(() => navigate('/invest'), 1000);
         } else {
-          setTimeout(() => {
-            navigate('/login');
-          }, 2000);
+          setTimeout(() => navigate('/login'), 2000);
         }
         
         setRetryCount(0);
       } else {
-        // Handle failure
+        // Handle failure with detailed error
+        console.error('🚨 Authentication failed:', result.error);
+        
         toast({
           title: mode === 'login' ? "❌ Login Failed" : "❌ Registration Failed",
           description: result.error || 'कुछ तकनीकी समस्या है।',
@@ -141,11 +151,11 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
       }
       
     } catch (error: any) {
-      console.error('💥 Unexpected error:', error);
+      console.error('💥 Unexpected error in form submission:', error);
       
       toast({
         title: "❌ Unexpected Error",
-        description: "कुछ अनपेक्षित समस्या है। फिर से कोशिश करें।",
+        description: "कुछ अनपेक्षित समस्या है। Page refresh करके फिर कोशिश करें।",
         variant: "destructive"
       });
     } finally {
@@ -156,7 +166,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
   const handleRetry = async () => {
     setConnectionStatus('checking');
     const result = await testSupabaseConnection();
-    setConnectionStatus(result.isConnected ? 'connected' : 'disconnected');
+    setConnectionStatus(result.success ? 'connected' : 'disconnected');
   };
   
   return (
@@ -189,21 +199,38 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
             )}
           </div>
           
-          {connectionStatus === 'disconnected' && (
+          <div className="flex items-center space-x-2">
+            {connectionStatus === 'disconnected' && (
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={handleRetry}
+                className="text-xs"
+              >
+                Retry
+              </Button>
+            )}
             <Button 
               size="sm" 
-              variant="outline" 
-              onClick={handleRetry}
+              variant="ghost" 
+              onClick={() => setDebugMode(!debugMode)}
               className="text-xs"
             >
-              Retry
+              Debug
             </Button>
-          )}
+          </div>
         </div>
         
-        {retryCount > 0 && (
+        {(retryCount > 0 || debugMode) && (
           <div className="mt-2 text-xs text-gray-600">
-            Retry attempts: {retryCount}
+            {retryCount > 0 && <div>Retry attempts: {retryCount}</div>}
+            {debugMode && (
+              <div className="mt-1 p-2 bg-gray-100 rounded text-xs font-mono">
+                URL: {window.location.origin}<br/>
+                Browser: {navigator.userAgent.substring(0, 30)}...<br/>
+                LocalStorage: {Object.keys(localStorage).filter(k => k.includes('supabase')).length} Supabase keys
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -294,7 +321,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, selectedPlan }) => {
         <Button 
           type="submit" 
           className="w-full bg-easyearn-purple hover:bg-easyearn-darkpurple text-white font-medium py-3"
-          disabled={isLoading || connectionStatus === 'disconnected'}
+          disabled={isLoading}
         >
           {isLoading ? (
             <span className="flex items-center justify-center">

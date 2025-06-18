@@ -1,6 +1,5 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { retryWithBackoff } from './connectionUtils';
 
 export interface AuthResult {
   success: boolean;
@@ -8,19 +7,20 @@ export interface AuthResult {
   needsRetry?: boolean;
 }
 
+// Simplified and robust registration function
 export const enhancedRegister = async (
   email: string, 
   password: string, 
   phone: string, 
   referralCode?: string
 ): Promise<AuthResult> => {
-  console.log('🚀 Enhanced registration started for:', email);
+  console.log('🚀 Starting registration for:', email);
   
   try {
-    // Pre-registration cleanup
+    // Clean up any existing auth state first
     await cleanupAuthState();
     
-    // Enhanced validation
+    // Basic validation
     if (!email.includes('@')) {
       return { success: false, error: 'सही email address डालें।' };
     }
@@ -33,140 +33,112 @@ export const enhancedRegister = async (
       return { success: false, error: 'सही phone number डालें।' };
     }
 
-    // Test connection first
-    const connectionTest = await testConnection();
-    if (!connectionTest.success) {
+    console.log('✅ Validation passed, attempting Supabase registration...');
+
+    // Direct Supabase registration call with proper redirect URL
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim().toLowerCase(),
+      password: password.trim(),
+      options: {
+        emailRedirectTo: `${window.location.origin}/`,
+        data: {
+          phone: phone.trim(),
+          referral_code: referralCode?.trim() || '',
+        }
+      }
+    });
+
+    if (error) {
+      console.error('❌ Supabase registration error:', error);
       return { 
         success: false, 
-        error: 'Supabase connection failed। बाद में कोशिश करें।',
-        needsRetry: true 
+        error: getHindiErrorMessage(error),
+        needsRetry: shouldRetryError(error)
       };
     }
 
-    console.log('✅ Connection test passed, proceeding with registration');
-
-    // Registration with retry mechanism
-    const result = await retryWithBackoff(async () => {
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
-        password: password.trim(),
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            phone: phone.trim(),
-            referral_code: referralCode?.trim() || '',
-          }
-        }
-      });
-
-      if (error) {
-        console.error('❌ Registration error:', error);
-        throw error;
+    if (data.user) {
+      console.log('✅ Registration successful:', data.user.email);
+      
+      // Check if email confirmation is required
+      if (!data.session) {
+        console.log('📧 Email confirmation required');
+        return { 
+          success: true, 
+          error: 'Account बन गया है! Email check करें या direct login करें।' 
+        };
       }
-
-      console.log('✅ Registration successful:', data.user?.email);
-      return data;
-    }, 3, 2000);
+    }
 
     return { success: true };
 
   } catch (error: any) {
-    console.error('💥 Enhanced registration failed:', error);
-    
-    // Enhanced error handling
-    let errorMessage = getDetailedErrorMessage(error);
-    
+    console.error('💥 Registration failed:', error);
     return { 
       success: false, 
-      error: errorMessage,
-      needsRetry: shouldRetryAuth(error)
+      error: getHindiErrorMessage(error),
+      needsRetry: shouldRetryError(error)
     };
   }
 };
 
+// Simplified and robust login function
 export const enhancedLogin = async (email: string, password: string): Promise<AuthResult> => {
-  console.log('🔑 Enhanced login started for:', email);
+  console.log('🔑 Starting login for:', email);
   
   try {
-    // Pre-login cleanup
+    // Clean up any existing auth state first
     await cleanupAuthState();
     
-    // Test connection first
-    const connectionTest = await testConnection();
-    if (!connectionTest.success) {
+    console.log('✅ Starting Supabase login...');
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password: password.trim(),
+    });
+
+    if (error) {
+      console.error('❌ Supabase login error:', error);
       return { 
         success: false, 
-        error: 'Connection नहीं हो पा रहा। Internet check करें।',
-        needsRetry: true 
+        error: getHindiErrorMessage(error),
+        needsRetry: shouldRetryError(error)
       };
     }
 
-    // Login with retry mechanism
-    const result = await retryWithBackoff(async () => {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password: password.trim(),
-      });
-
-      if (error) {
-        console.error('❌ Login error:', error);
-        throw error;
-      }
-
-      console.log('✅ Login successful:', data.user?.email);
-      return data;
-    }, 3, 2000);
+    if (data.user) {
+      console.log('✅ Login successful:', data.user.email);
+    }
 
     return { success: true };
 
   } catch (error: any) {
-    console.error('💥 Enhanced login failed:', error);
-    
-    let errorMessage = getDetailedErrorMessage(error);
-    
+    console.error('💥 Login failed:', error);
     return { 
       success: false, 
-      error: errorMessage,
-      needsRetry: shouldRetryAuth(error)
+      error: getHindiErrorMessage(error),
+      needsRetry: shouldRetryError(error)
     };
   }
 };
 
-const testConnection = async (): Promise<{ success: boolean; error?: string }> => {
-  try {
-    console.log('🔌 Testing Supabase connection...');
-    
-    const { data, error } = await supabase.auth.getSession();
-    
-    if (error && error.message.includes('fetch')) {
-      return { success: false, error: 'Network connection failed' };
-    }
-    
-    console.log('✅ Connection test successful');
-    return { success: true };
-    
-  } catch (error: any) {
-    console.error('❌ Connection test failed:', error);
-    return { success: false, error: error.message };
-  }
-};
-
+// Clean auth state utility
 const cleanupAuthState = async () => {
   try {
     console.log('🧹 Cleaning up auth state...');
     
-    // Clear localStorage
+    // Clear all auth-related localStorage keys
     Object.keys(localStorage).forEach(key => {
       if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
         localStorage.removeItem(key);
       }
     });
     
-    // Attempt signout
+    // Attempt global signout
     try {
       await supabase.auth.signOut({ scope: 'global' });
     } catch (e) {
-      // Ignore errors
+      console.log('Signout attempt completed (may have been already signed out)');
     }
     
     console.log('✅ Auth state cleaned');
@@ -175,22 +147,23 @@ const cleanupAuthState = async () => {
   }
 };
 
-const getDetailedErrorMessage = (error: any): string => {
+// Enhanced Hindi error messages
+const getHindiErrorMessage = (error: any): string => {
   const message = error.message || error.toString();
   console.log('🔍 Error analysis:', { message, code: error.code, status: error.status });
   
-  // Network errors
+  // Network and connection errors
   if (message.includes('fetch') || message.includes('NetworkError') || message.includes('Failed to fetch')) {
-    return 'Internet connection की समस्या है। Network check करें।';
+    return 'इंटरनेट connection check करें। Network की समस्या है।';
   }
   
   if (message.includes('CORS') || message.includes('cross-origin')) {
-    return 'Server configuration की समस्या है। बाद में कोशिश करें।';
+    return 'Technical error हुई है। Page refresh करके फिर कोशिश करें।';
   }
   
-  // Auth errors
+  // Authentication errors
   if (message.includes('Invalid login credentials')) {
-    return 'गलत email या password है।';
+    return 'गलत email या password है। सही details डालें।';
   }
   
   if (message.includes('User already registered')) {
@@ -202,22 +175,29 @@ const getDetailedErrorMessage = (error: any): string => {
   }
   
   if (message.includes('signup is disabled')) {
-    return 'Registration temporarily बंद है।';
+    return 'Registration temporarily बंद है। बाद में कोशिश करें।';
   }
   
   if (message.includes('rate limit')) {
     return 'बहुत जल्दी try कर रहे हैं। 2 मिनट बाद कोशिश करें।';
   }
   
-  return `तकनीकी समस्या: ${message}। बाद में कोशिश करें।`;
+  // Server errors
+  if (message.includes('500') || message.includes('Internal Server Error')) {
+    return 'Server में समस्या है। बाद में कोशिश करें।';
+  }
+  
+  return `तकनीकी समस्या: ${message}। Page refresh करके फिर कोशिश करें।`;
 };
 
-const shouldRetryAuth = (error: any): boolean => {
+// Determine if error should trigger retry
+const shouldRetryError = (error: any): boolean => {
   const message = error.message || '';
   
+  // Retry for network issues
   return message.includes('fetch') || 
          message.includes('NetworkError') || 
          message.includes('timeout') ||
-         message.includes('CORS') ||
+         message.includes('500') ||
          error.code === 'NETWORK_ERROR';
 };
