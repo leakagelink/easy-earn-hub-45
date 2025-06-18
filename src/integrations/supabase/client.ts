@@ -23,11 +23,11 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, 
     headers: {
       'user-agent': navigator.userAgent,
     },
-    fetch: (url, options = {}) => {
+    fetch: (url, options: RequestInit = {}) => {
       console.log('🌐 Supabase Request:', url, options);
       
       // Enhanced fetch with timeout and retry logic
-      const enhancedOptions = {
+      const enhancedOptions: RequestInit = {
         ...options,
         headers: {
           ...(options.headers || {}),
@@ -35,8 +35,8 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, 
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        mode: 'cors' as const,
-        credentials: 'omit' as const,
+        mode: 'cors',
+        credentials: 'omit',
       };
       
       return fetch(url, enhancedOptions)
