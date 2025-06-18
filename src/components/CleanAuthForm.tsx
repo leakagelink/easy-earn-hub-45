@@ -2,11 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useUser, useSignIn, useSignUp } from '@clerk/clerk-react';
-import { RefreshCw, AlertCircle, Wifi, WifiOff } from 'lucide-react';
+import LoadingState from '@/components/auth/LoadingState';
+import ErrorState from '@/components/auth/ErrorState';
+import NetworkStatus from '@/components/auth/NetworkStatus';
+import CleanAuthInputs from '@/components/auth/CleanAuthInputs';
+import CleanAuthSubmit from '@/components/auth/CleanAuthSubmit';
 
 interface CleanAuthFormProps {
   mode: 'login' | 'register';
@@ -89,73 +90,19 @@ const CleanAuthForm: React.FC<CleanAuthFormProps> = ({ mode }) => {
 
   // Show loading with timeout handling
   if (!isLoaded && !loadingTimeout) {
-    return (
-      <div className="w-full max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
-        <div className="text-center">
-          <RefreshCw className="animate-spin h-8 w-8 mx-auto mb-4 text-easyearn-purple" />
-          <p className="text-gray-600 mb-2">Authentication loading कर रहा है...</p>
-          <div className="text-xs text-gray-500">
-            {!networkStatus && (
-              <div className="flex items-center justify-center text-red-500 mb-2">
-                <WifiOff className="h-4 w-4 mr-1" />
-                Network offline है
-              </div>
-            )}
-            <p>Retry count: {retryCount}</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingState networkStatus={networkStatus} retryCount={retryCount} />;
   }
 
   // Show error if timeout occurred
   if (loadingTimeout || (!isLoaded && !signInLoaded && !signUpLoaded)) {
     return (
-      <div className="w-full max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
-        <div className="text-center">
-          <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-500" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Authentication Load नहीं हो रहा
-          </h3>
-          <p className="text-gray-600 mb-4">
-            Clerk authentication system load नहीं हो पा रहा है। कृपया retry करें।
-          </p>
-          
-          {!networkStatus && (
-            <div className="bg-red-50 p-3 rounded-lg mb-4">
-              <div className="flex items-center text-red-700">
-                <WifiOff className="h-4 w-4 mr-2" />
-                <span className="text-sm">Internet connection check करें</span>
-              </div>
-            </div>
-          )}
-          
-          <div className="space-y-3">
-            <Button
-              onClick={handleRetry}
-              className="w-full bg-easyearn-purple hover:bg-easyearn-darkpurple"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Retry करें
-            </Button>
-            
-            <Button
-              onClick={handleForceRefresh}
-              variant="outline"
-              className="w-full"
-            >
-              Page Refresh करें
-            </Button>
-            
-            <div className="text-xs text-gray-500 mt-4">
-              <p>Debug Info:</p>
-              <p>Retry Count: {retryCount}</p>
-              <p>Network: {networkStatus ? 'Online' : 'Offline'}</p>
-              <p>Clerk Loaded: {isLoaded ? 'Yes' : 'No'}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ErrorState 
+        networkStatus={networkStatus}
+        retryCount={retryCount}
+        isLoaded={isLoaded}
+        onRetry={handleRetry}
+        onForceRefresh={handleForceRefresh}
+      />
     );
   }
 
@@ -297,71 +244,27 @@ const CleanAuthForm: React.FC<CleanAuthFormProps> = ({ mode }) => {
         <h2 className="text-2xl font-bold">
           {mode === 'login' ? '🔑 Login' : '📝 Register'}
         </h2>
-        <div className="flex items-center text-xs text-gray-500">
-          {networkStatus ? (
-            <Wifi className="h-3 w-3 text-green-500" />
-          ) : (
-            <WifiOff className="h-3 w-3 text-red-500" />
-          )}
-        </div>
+        <NetworkStatus networkStatus={networkStatus} />
       </div>
       
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="your@email.com"
-            required
-            disabled={isLoading}
-          />
-        </div>
+        <CleanAuthInputs
+          mode={mode}
+          email={email}
+          setEmail={setEmail}
+          phone={phone}
+          setPhone={setPhone}
+          password={password}
+          setPassword={setPassword}
+          isLoading={isLoading}
+        />
 
-        {mode === 'register' && (
-          <div>
-            <Label htmlFor="phone">Phone Number</Label>
-            <Input
-              id="phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="9876543210"
-              required
-              disabled={isLoading}
-            />
-          </div>
-        )}
-
-        <div>
-          <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password (6+ characters)"
-            required
-            disabled={isLoading}
-          />
-        </div>
-
-        <Button
-          type="submit"
-          className="w-full bg-easyearn-purple hover:bg-easyearn-darkpurple"
-          disabled={isLoading || !signInLoaded || !signUpLoaded}
-        >
-          {isLoading ? (
-            <span className="flex items-center justify-center">
-              <RefreshCw className="animate-spin -ml-1 mr-2 h-4 w-4" />
-              {mode === 'login' ? 'Logging in...' : 'Creating account...'}
-            </span>
-          ) : (
-            mode === 'login' ? '🚀 Login करें' : '🎯 Create Account'
-          )}
-        </Button>
+        <CleanAuthSubmit
+          mode={mode}
+          isLoading={isLoading}
+          signInLoaded={signInLoaded}
+          signUpLoaded={signUpLoaded}
+        />
       </form>
 
       <div className="text-center mt-6">
