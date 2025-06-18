@@ -1,10 +1,9 @@
 
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import AuthForm from '@/components/AuthForm';
+import SimpleAuthForm from '@/components/SimpleAuthForm';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import NetworkDiagnostics from '@/components/NetworkDiagnostics';
 
 const Register = () => {
   const location = useLocation();
@@ -17,12 +16,11 @@ const Register = () => {
       
       <main className="flex-grow container mx-auto px-4 py-8 mb-16 md:mb-0">
         <div className="max-w-md mx-auto">
-          <AuthForm mode="register" selectedPlan={selectedPlan || undefined} />
+          <SimpleAuthForm mode="register" selectedPlan={selectedPlan || undefined} />
         </div>
       </main>
       
       <Footer />
-      <NetworkDiagnostics />
     </div>
   );
 };
