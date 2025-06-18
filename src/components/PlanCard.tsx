@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
 import { Bitcoin } from 'lucide-react';
-import { useSupabaseAuth } from '@/contexts/auth';
+import { useUser } from '@clerk/clerk-react';
 
 interface PlanCardProps {
   id: string;
@@ -25,14 +24,14 @@ const PlanCard: React.FC<PlanCardProps> = ({
   isPremium = false,
 }) => {
   const navigate = useNavigate();
-  const { currentUser } = useSupabaseAuth();
+  const { isSignedIn } = useUser();
 
   const handleChoosePlan = () => {
     console.log('Plan selection started for plan:', id);
 
-    console.log('Current user status:', currentUser ? 'Logged in' : 'Not logged in');
+    console.log('Current user status:', isSignedIn ? 'Logged in' : 'Not logged in');
 
-    if (currentUser) {
+    if (isSignedIn) {
       // User is logged in, go directly to payment page
       console.log('Redirecting logged in user to payment page');
       navigate('/payment');
