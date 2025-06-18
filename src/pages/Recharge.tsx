@@ -3,18 +3,18 @@ import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import RechargeForm from "@/components/recharge/RechargeForm";
+import { getCurrentAuth } from '@/utils/simpleAuth';
 import PaymentInstructions from "@/components/recharge/PaymentInstructions";
 
 const Recharge = () => {
   const navigate = useNavigate();
+  const auth = getCurrentAuth();
   
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    if (!isLoggedIn) {
+    if (!auth?.isLoggedIn) {
       navigate('/login');
     }
-  }, [navigate]);
+  }, [auth, navigate]);
   
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -26,7 +26,12 @@ const Recharge = () => {
         </h1>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <RechargeForm />
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-xl font-semibold mb-4">Recharge Form</h2>
+            <p className="text-gray-600">
+              Recharge functionality will be available after payment integration.
+            </p>
+          </div>
           <PaymentInstructions />
         </div>
       </main>

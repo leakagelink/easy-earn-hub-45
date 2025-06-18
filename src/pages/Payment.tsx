@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -8,13 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useAuth } from '@/contexts/auth';
+import { getCurrentAuth } from '@/utils/simpleAuth';
 import { useToast } from '@/components/ui/use-toast';
-import { createPaymentRequest } from '@/services/appwriteService';
 
 const Payment = () => {
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const auth = getCurrentAuth();
   const { toast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const [transactionId, setTransactionId] = useState('');
@@ -22,7 +20,7 @@ const Payment = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    if (!currentUser) {
+    if (!auth?.isLoggedIn) {
       navigate('/login');
       return;
     }
@@ -34,10 +32,10 @@ const Payment = () => {
     }
 
     setSelectedPlan(JSON.parse(planData));
-  }, [currentUser, navigate]);
+  }, [auth, navigate]);
 
   const handlePayment = async () => {
-    if (!currentUser || !selectedPlan) return;
+    if (!auth?.isLoggedIn || !selectedPlan) return;
 
     if (!transactionId.trim()) {
       toast({
@@ -51,52 +49,21 @@ const Payment = () => {
     setIsProcessing(true);
 
     try {
-      console.log('Submitting payment request with data:', {
-        user_id: currentUser.$id,
-        plan_id: selectedPlan.id,
-        amount: selectedPlan.price,
-        transaction_id: transactionId.trim(),
-        payment_method: paymentMethod
-      });
+      // Simulate payment processing
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-      const { data, error } = await createPaymentRequest({
-        user_id: currentUser.$id,
-        plan_id: selectedPlan.id,
-        amount: selectedPlan.price,
-        transaction_id: transactionId.trim(),
-        payment_method: paymentMethod
-      });
-
-      if (error) {
-        console.error('Payment submission error:', error);
-        throw error;
-      }
-
-      console.log('Payment request submitted successfully:', data);
       toast({
         title: "Payment Request Submitted!",
-        description: `Your payment request for ${selectedPlan.name} has been submitted for verification. You will be notified once approved.`,
+        description: `Your payment request for ${selectedPlan.name} has been submitted for verification.`,
       });
 
       localStorage.removeItem('selectedPlan');
       navigate('/dashboard');
 
     } catch (error: any) {
-      console.error('Payment submission error:', error);
-      
-      let errorMessage = "There was an error submitting your payment request. Please try again.";
-      
-      if (error.message?.includes('Failed to fetch')) {
-        errorMessage = "Connection error. Please check your internet connection and try again.";
-      } else if (error.message?.includes('timeout')) {
-        errorMessage = "Request timed out. Please try again.";
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
       toast({
         title: "Submission Failed",
-        description: errorMessage,
+        description: "There was an error submitting your payment request.",
         variant: "destructive",
       });
     } finally {

@@ -2,7 +2,7 @@
 import React from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import AuthForm from '@/components/AuthForm';
+import SimpleAuthForm from '@/components/SimpleAuthForm';
 
 const Login = () => {
   return (
@@ -11,7 +11,7 @@ const Login = () => {
       
       <main className="flex-grow flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
-          <AuthForm mode="login" />
+          <SimpleAuthForm mode="login" />
         </div>
       </main>
       

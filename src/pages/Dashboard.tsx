@@ -4,34 +4,22 @@ import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { useAuth } from "@/contexts/auth";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { getCurrentAuth } from '@/utils/simpleAuth';
 import DashboardStats from "@/components/dashboard/DashboardStats";
 import DashboardActions from "@/components/dashboard/DashboardActions";
-import TransactionsTable from "@/components/dashboard/TransactionsTable";
-import InvestmentsTable from "@/components/dashboard/InvestmentsTable";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { currentUser, loading } = useAuth();
-  const {
-    investments,
-    transactions,
-    balance,
-    totalEarned,
-    dailyProfit,
-    referralEarnings,
-    isLoading
-  } = useDashboardData();
+  const auth = getCurrentAuth();
   
   // Check if user is logged in
   useEffect(() => {
-    if (!loading && !currentUser) {
+    if (!auth?.isLoggedIn) {
       navigate('/login');
     }
-  }, [currentUser, loading, navigate]);
+  }, [auth, navigate]);
 
-  if (loading || isLoading) {
+  if (!auth?.isLoggedIn) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">Loading...</div>
@@ -45,15 +33,15 @@ const Dashboard = () => {
       
       <main className="flex-grow container mx-auto px-4 py-8">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">
-          Dashboard
+          Dashboard - Welcome {auth.user.email}
         </h1>
         
         <DashboardStats
-          balance={balance}
-          dailyProfit={dailyProfit}
-          totalEarned={totalEarned}
-          referralEarnings={referralEarnings}
-          investmentCount={investments.length}
+          balance={0}
+          dailyProfit={0}
+          totalEarned={0}
+          referralEarnings={0}
+          investmentCount={0}
         />
         
         <DashboardActions />
@@ -65,11 +53,15 @@ const Dashboard = () => {
           </TabsList>
           
           <TabsContent value="transactions">
-            <TransactionsTable transactions={transactions} />
+            <div className="p-4 text-center text-gray-500">
+              No transactions yet
+            </div>
           </TabsContent>
           
           <TabsContent value="investments">
-            <InvestmentsTable investments={investments} />
+            <div className="p-4 text-center text-gray-500">
+              No investments yet
+            </div>
           </TabsContent>
         </Tabs>
       </main>

@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import BottomBar from "./components/BottomBar";
-import { AuthProvider } from "./contexts/auth";
+import { initializeAuth } from "./utils/simpleAuth";
 
 // Pages
 import Index from "./pages/Index";
@@ -39,7 +39,6 @@ const MaintenanceCheck = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const isMaintenanceMode = localStorage.getItem('maintenanceMode') === 'true';
   
-  // Don't show maintenance page for admin routes or if maintenance mode is off
   const isAdminRoute = location.pathname.startsWith('/admin');
   
   if (isMaintenanceMode && !isAdminRoute) {
@@ -51,12 +50,14 @@ const MaintenanceCheck = ({ children }: { children: React.ReactNode }) => {
 
 // AppRoutes component that contains all routes
 const AppRoutes = () => {
-  console.log('🔧 AppRoutes rendering...');
+  // Initialize auth system on app start
+  React.useEffect(() => {
+    initializeAuth();
+  }, []);
   
   return (
     <MaintenanceCheck>
       <Routes>
-        {/* Redirect the root path to home page instead of login */}
         <Route path="/" element={<Index />} />
         <Route path="/home" element={<Index />} />
         <Route path="/dashboard" element={<Dashboard />} />
@@ -89,17 +90,13 @@ const AppRoutes = () => {
 };
 
 const App = () => {
-  console.log('🔧 App component rendering...');
-  
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <AuthProvider>
-            <AppRoutes />
-          </AuthProvider>
+          <AppRoutes />
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
