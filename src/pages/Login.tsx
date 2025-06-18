@@ -1,6 +1,6 @@
 
 import React from 'react';
-import SimpleClerkAuth from '@/components/SimpleClerkAuth';
+import CleanAuthForm from '@/components/CleanAuthForm';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
@@ -16,7 +16,7 @@ const Login = () => {
             <p className="text-gray-600">अपने EasyEarn account में login करें</p>
           </div>
           
-          <SimpleClerkAuth mode="login" />
+          <CleanAuthForm mode="login" />
         </div>
       </main>
       

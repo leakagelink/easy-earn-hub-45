@@ -1,6 +1,6 @@
 
 import React from 'react';
-import SimpleClerkAuth from '@/components/SimpleClerkAuth';
+import CleanAuthForm from '@/components/CleanAuthForm';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
@@ -16,7 +16,7 @@ const Register = () => {
             <p className="text-gray-600">अपना account बनाएं और आज ही earning शुरू करें</p>
           </div>
           
-          <SimpleClerkAuth mode="register" />
+          <CleanAuthForm mode="register" />
         </div>
       </main>
       
