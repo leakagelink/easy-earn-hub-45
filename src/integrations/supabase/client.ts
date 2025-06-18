@@ -30,7 +30,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, 
       const enhancedOptions = {
         ...options,
         headers: {
-          ...options.headers,
+          ...(options.headers || {}),
           'User-Agent': navigator.userAgent,
           'Accept': 'application/json',
           'Content-Type': 'application/json',
