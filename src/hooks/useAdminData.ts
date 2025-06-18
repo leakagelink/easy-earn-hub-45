@@ -1,105 +1,50 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { 
-  getPaymentRequests, 
-  getAllUsers, 
-  getAllInvestments, 
-  getAllWithdrawals, 
-  getAllTransactions 
-} from '@/services/appwriteService';
 
 export const useAdminData = () => {
+  // Mock data for admin dashboard
+  const mockPaymentRequests = [];
+  const mockUsers = [];
+  const mockInvestments = [];
+  const mockWithdrawals = [];
+  const mockTransactions = [];
+
   const { data: paymentRequests = [], isLoading, refetch } = useQuery({
     queryKey: ['admin-payment-requests'],
     queryFn: async () => {
-      console.log('Fetching payment requests from Appwrite...');
-      const { data, error } = await getPaymentRequests();
-      
-      if (error) {
-        console.error('Error fetching payment requests:', error);
-        throw error;
-      }
-
-      console.log('Payment requests fetched:', data?.length || 0);
-      return data || [];
+      // Return mock data from localStorage or empty array
+      return mockPaymentRequests;
     },
-    retry: 3,
-    retryDelay: 1000,
   });
 
   const { data: users = [] } = useQuery({
     queryKey: ['admin-users'],
     queryFn: async () => {
-      console.log('Fetching users from Appwrite...');
-      const { data, error } = await getAllUsers();
-      
-      if (error) {
-        console.error('Error fetching users:', error);
-        throw error;
-      }
-
-      console.log('Users fetched:', data?.length || 0);
-      return data || [];
+      // Get users from localStorage
+      const users = localStorage.getItem('easyearn_users');
+      return users ? JSON.parse(users) : [];
     },
-    retry: 3,
-    retryDelay: 1000,
   });
 
   const { data: investments = [] } = useQuery({
     queryKey: ['admin-investments'],
     queryFn: async () => {
-      console.log('Fetching investments from Appwrite...');
-      const { data, error } = await getAllInvestments();
-      
-      if (error) {
-        console.error('Error fetching investments:', error);
-        throw error;
-      }
-
-      console.log('Investments fetched:', data?.length || 0);
-      return data || [];
+      return mockInvestments;
     },
-    retry: 3,
-    retryDelay: 1000,
   });
 
   const { data: withdrawals = [] } = useQuery({
     queryKey: ['admin-withdrawals'],
     queryFn: async () => {
-      console.log('Fetching withdrawals from Appwrite...');
-      const { data, error } = await getAllWithdrawals();
-      
-      if (error) {
-        console.error('Error fetching withdrawals:', error);
-        throw error;
-      }
-
-      console.log('Withdrawals fetched:', data?.length || 0);
-      return data || [];
+      return mockWithdrawals;
     },
-    retry: 3,
-    retryDelay: 1000,
   });
 
   const { data: transactions = [] } = useQuery({
     queryKey: ['admin-transactions'],
     queryFn: async () => {
-      console.log('Fetching transactions from Appwrite...');
-      const { data, error } = await getAllTransactions();
-      
-      if (error) {
-        console.error('Error fetching transactions:', error);
-        throw error;
-      }
-
-      console.log('Transactions fetched:', data?.length || 0);
-      return data?.map(tx => ({
-        ...tx,
-        user_email: tx.email || 'N/A'
-      })) || [];
+      return mockTransactions;
     },
-    retry: 3,
-    retryDelay: 1000,
   });
 
   // Calculate stats from the fetched data
@@ -117,7 +62,7 @@ export const useAdminData = () => {
     withdrawals,
     transactions,
     stats,
-    isLoading,
+    isLoading: false,
     refetch
   };
 };

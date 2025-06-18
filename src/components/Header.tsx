@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
-import AuthButton from './AuthButton';
+import SimpleAuthButton from './SimpleAuthButton';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -32,7 +32,7 @@ const Header = () => {
             <Link to="/invest" className="text-gray-700 hover:text-easyearn-purple px-3 py-2 rounded-md text-sm font-medium">
               Plans
             </Link>
-            <AuthButton />
+            <SimpleAuthButton />
           </div>
           <div className="md:hidden">
             <button
@@ -72,7 +72,7 @@ const Header = () => {
               Plans
             </Link>
             <div className="px-3 py-2">
-              <AuthButton />
+              <SimpleAuthButton />
             </div>
           </div>
         </div>
