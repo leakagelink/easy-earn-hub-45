@@ -1,80 +1,91 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
-import { useUser } from '@clerk/clerk-react';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useAuth } from '@/contexts/auth';
+import { useToast } from '@/components/ui/use-toast';
+import { createPaymentRequest } from '@/services/appwriteService';
 
 const Payment = () => {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const { toast } = useToast();
-  const { user, isSignedIn } = useUser();
+  const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const [transactionId, setTransactionId] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const selectedPlan = localStorage.getItem('selectedPlan');
+  const [paymentMethod, setPaymentMethod] = useState('upi');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    if (!isSignedIn) {
-      toast({
-        title: "Please login first",
-        variant: "destructive",
-      });
+    if (!currentUser) {
       navigate('/login');
+      return;
     }
-  }, [isSignedIn, navigate, toast]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    const planData = localStorage.getItem('selectedPlan');
+    if (!planData) {
+      navigate('/invest');
+      return;
+    }
 
-    if (!transactionId) {
+    setSelectedPlan(JSON.parse(planData));
+  }, [currentUser, navigate]);
+
+  const handlePayment = async () => {
+    if (!currentUser || !selectedPlan) return;
+
+    if (!transactionId.trim()) {
       toast({
-        title: "Please enter transaction ID",
+        title: "Transaction ID Required",
+        description: "Please enter the transaction ID/UTR after making the payment.",
         variant: "destructive",
       });
       return;
     }
 
-    setIsSubmitting(true);
+    setIsProcessing(true);
 
     try {
-      if (!selectedPlan) {
-        toast({
-          title: "No plan selected",
-          description: "Please select a plan before proceeding to payment.",
-          variant: "destructive",
-        });
-        navigate('/invest');
-        return;
-      }
-
-      const planData = JSON.parse(selectedPlan);
-
-      console.log('Submitting payment request with Clerk:', {
-        userId: user?.id,
-        planId: planData.id,
-        transactionId: transactionId,
-        paymentMethod: 'UPI',
-        amount: planData.price,
+      console.log('Submitting payment request with data:', {
+        user_id: currentUser.$id,
+        plan_id: selectedPlan.id,
+        amount: selectedPlan.price,
+        transaction_id: transactionId.trim(),
+        payment_method: paymentMethod
       });
 
-      // For now, just show success message - actual API integration can be added later
-      console.log('Payment request submitted successfully');
+      const { data, error } = await createPaymentRequest({
+        user_id: currentUser.$id,
+        plan_id: selectedPlan.id,
+        amount: selectedPlan.price,
+        transaction_id: transactionId.trim(),
+        payment_method: paymentMethod
+      });
+
+      if (error) {
+        console.error('Payment submission error:', error);
+        throw error;
+      }
+
+      console.log('Payment request submitted successfully:', data);
       toast({
-        title: "Payment request submitted",
-        description: `Your payment request for ${planData.name} has been submitted for verification.`,
+        title: "Payment Request Submitted!",
+        description: `Your payment request for ${selectedPlan.name} has been submitted for verification. You will be notified once approved.`,
       });
 
       localStorage.removeItem('selectedPlan');
-      setTransactionId('');
       navigate('/dashboard');
+
     } catch (error: any) {
       console.error('Payment submission error:', error);
-
+      
       let errorMessage = "There was an error submitting your payment request. Please try again.";
-
+      
       if (error.message?.includes('Failed to fetch')) {
         errorMessage = "Connection error. Please check your internet connection and try again.";
       } else if (error.message?.includes('timeout')) {
@@ -82,55 +93,195 @@ const Payment = () => {
       } else if (error.message) {
         errorMessage = error.message;
       }
-
+      
       toast({
         title: "Submission Failed",
         description: errorMessage,
         variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setIsProcessing(false);
     }
   };
 
+  if (!selectedPlan) {
+    return <div>Loading...</div>;
+  }
+
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <Card className="w-full max-w-md p-4">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">Payment Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="transactionId">Transaction ID</Label>
-              <Input
-                id="transactionId"
-                placeholder="Enter transaction ID"
-                value={transactionId}
-                onChange={(e) => setTransactionId(e.target.value)}
-                required
-              />
-            </div>
-            <Button
-              type="submit"
-              className="w-full bg-easyearn-purple hover:bg-easyearn-darkpurple text-white"
-              disabled={isSubmitting}
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <Header />
+      
+      <main className="flex-grow container mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6 text-center">
+            Complete Your Payment
+          </h1>
+          
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-center text-easyearn-purple">
+                {selectedPlan.name}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span>Plan Price:</span>
+                <span className="font-bold text-2xl text-easyearn-purple">₹{selectedPlan.price}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Daily Profit:</span>
+                <span className="font-semibold">₹{selectedPlan.dailyProfit}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Validity:</span>
+                <span className="font-semibold">{selectedPlan.validityDays} Days</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Total Expected Income:</span>
+                <span className="font-semibold text-green-600">₹{selectedPlan.totalIncome}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Select Payment Method</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="upi" id="upi" />
+                  <Label htmlFor="upi">UPI / QR Code</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="bank" id="bank" />
+                  <Label htmlFor="bank">Bank Transfer</Label>
+                </div>
+              </RadioGroup>
+            </CardContent>
+          </Card>
+
+          {paymentMethod === 'upi' && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>UPI Payment Instructions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="text-center">
+                  <p className="mb-4">Pay ₹{selectedPlan.price} using UPI:</p>
+                  <div className="bg-gray-100 p-4 rounded-lg mb-4">
+                    <p className="font-mono text-lg">dheerajtagde@ybl</p>
+                  </div>
+                  <img 
+                    src="/lovable-uploads/c3bb9200-c561-4fcc-8802-68d2f7d2d937.png" 
+                    alt="QR Code" 
+                    className="mx-auto w-48 h-48 object-contain"
+                  />
+                  <p className="text-sm text-gray-600 mt-4">
+                    Scan the QR code or use the UPI ID to make payment
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {paymentMethod === 'bank' && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Bank Transfer Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="text-center">
+                  <p className="mb-4">Transfer ₹{selectedPlan.price} to the following bank account:</p>
+                  <div className="bg-gray-100 p-4 rounded-lg space-y-3">
+                    <div className="flex justify-between">
+                      <span className="font-medium">Account Holder:</span>
+                      <span>Dheeraj Tagde</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Account Number:</span>
+                      <span className="font-mono">3512173750</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Bank Name:</span>
+                      <span>Kotak Mahindra</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">IFSC Code:</span>
+                      <span className="font-mono">KKBK0005886</span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-4">
+                    Please save the transaction reference number after making the transfer
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Enter Transaction Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="transactionId">
+                  {paymentMethod === 'upi' ? 'Transaction ID / UTR *' : 'Transaction Reference Number *'}
+                </Label>
+                <Input
+                  id="transactionId"
+                  value={transactionId}
+                  onChange={(e) => setTransactionId(e.target.value)}
+                  placeholder={paymentMethod === 'upi' ? 'Enter transaction ID or UTR number' : 'Enter transaction reference number'}
+                  required
+                />
+                <p className="text-sm text-gray-500">
+                  * Please enter the transaction details after completing the payment above
+                </p>
+              </div>
+              
+              <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200">
+                <h3 className="font-medium text-yellow-800 mb-2">Important Instructions</h3>
+                <ul className="text-sm text-yellow-700 space-y-1">
+                  {paymentMethod === 'upi' ? (
+                    <>
+                      <li>• Make the payment using the UPI ID or QR code above</li>
+                      <li>• Save the transaction ID/UTR from your payment app</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>• Transfer the exact amount to the bank account above</li>
+                      <li>• Save the transaction reference number from your bank</li>
+                    </>
+                  )}
+                  <li>• Enter the transaction details in the field below</li>
+                  <li>• Your plan will be activated after admin verification</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex gap-4">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/invest')}
+              className="flex-1"
             >
-              {isSubmitting ? (
-                <span className="flex items-center">
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Submitting...
-                </span>
-              ) : (
-                'Submit Payment'
-              )}
+              Cancel
             </Button>
-          </form>
-        </CardContent>
-      </Card>
+            <Button 
+              onClick={handlePayment}
+              disabled={isProcessing || !transactionId.trim()}
+              className="flex-1 bg-easyearn-purple hover:bg-easyearn-darkpurple"
+            >
+              {isProcessing ? 'Processing...' : 'Submit Payment Request'}
+            </Button>
+          </div>
+        </div>
+      </main>
+      
+      <Footer />
     </div>
   );
 };

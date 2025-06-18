@@ -39,57 +39,6 @@ export type Database = {
         }
         Relationships: []
       }
-      investments: {
-        Row: {
-          amount: number
-          created_at: string | null
-          daily_profit: number | null
-          expiry_date: string | null
-          id: string
-          plan_id: string | null
-          purchase_date: string | null
-          status: string | null
-          user_id: string | null
-        }
-        Insert: {
-          amount: number
-          created_at?: string | null
-          daily_profit?: number | null
-          expiry_date?: string | null
-          id?: string
-          plan_id?: string | null
-          purchase_date?: string | null
-          status?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          amount?: number
-          created_at?: string | null
-          daily_profit?: number | null
-          expiry_date?: string | null
-          id?: string
-          plan_id?: string | null
-          purchase_date?: string | null
-          status?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "investments_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "investment_plans"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "investments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       payment_requests: {
         Row: {
           amount: number
@@ -99,7 +48,6 @@ export type Database = {
           id: string
           payment_method: string
           plan_id: string | null
-          plan_name: string | null
           status: string | null
           transaction_id: string
           user_id: string | null
@@ -112,7 +60,6 @@ export type Database = {
           id?: string
           payment_method?: string
           plan_id?: string | null
-          plan_name?: string | null
           status?: string | null
           transaction_id: string
           user_id?: string | null
@@ -125,7 +72,6 @@ export type Database = {
           id?: string
           payment_method?: string
           plan_id?: string | null
-          plan_name?: string | null
           status?: string | null
           transaction_id?: string
           user_id?: string | null
@@ -160,7 +106,6 @@ export type Database = {
           email: string
           id: string
           phone: string | null
-          referral_code: string | null
           updated_at: string | null
         }
         Insert: {
@@ -168,7 +113,6 @@ export type Database = {
           email: string
           id: string
           phone?: string | null
-          referral_code?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -176,7 +120,6 @@ export type Database = {
           email?: string
           id?: string
           phone?: string | null
-          referral_code?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -186,9 +129,7 @@ export type Database = {
           amount: number
           created_at: string | null
           id: string
-          payment_method: string | null
           status: string | null
-          transaction_id: string | null
           type: string
           user_id: string | null
         }
@@ -196,9 +137,7 @@ export type Database = {
           amount: number
           created_at?: string | null
           id?: string
-          payment_method?: string | null
           status?: string | null
-          transaction_id?: string | null
           type: string
           user_id?: string | null
         }
@@ -206,15 +145,58 @@ export type Database = {
           amount?: number
           created_at?: string | null
           id?: string
-          payment_method?: string | null
           status?: string | null
-          transaction_id?: string | null
           type?: string
           user_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_investments: {
+        Row: {
+          amount: number
+          expiry_date: string | null
+          id: string
+          plan_id: string | null
+          purchase_date: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          expiry_date?: string | null
+          id?: string
+          plan_id?: string | null
+          purchase_date?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          expiry_date?: string | null
+          id?: string
+          plan_id?: string | null
+          purchase_date?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_investments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "investment_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_investments_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -265,8 +247,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_payment_request: {
+        Args: { request_id: string }
+        Returns: boolean
+      }
       is_admin: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      reject_payment_request: {
+        Args: { request_id: string }
         Returns: boolean
       }
     }

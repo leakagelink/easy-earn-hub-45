@@ -1,8 +1,8 @@
+
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
 import { Bitcoin } from 'lucide-react';
-import { useUser } from '@clerk/clerk-react';
 
 interface PlanCardProps {
   id: string;
@@ -24,14 +24,49 @@ const PlanCard: React.FC<PlanCardProps> = ({
   isPremium = false,
 }) => {
   const navigate = useNavigate();
-  const { isSignedIn } = useUser();
+  
+  // Safe auth context access with proper fallback detection
+  const getCurrentUser = () => {
+    try {
+      // Try to get auth context
+      const { useAuth } = require('@/contexts/auth');
+      const auth = useAuth();
+      return auth.currentUser;
+    } catch (error) {
+      console.log('Auth context not available, checking for fallback session...');
+      
+      // Check fallback auth system
+      try {
+        const { FallbackAuthSystem } = require('@/utils/fallbackAuth');
+        const fallbackSession = FallbackAuthSystem.getCurrentSession();
+        return fallbackSession ? fallbackSession.user : null;
+      } catch (fallbackError) {
+        console.log('Fallback auth also not available');
+        return null;
+      }
+    }
+  };
 
   const handleChoosePlan = () => {
     console.log('Plan selection started for plan:', id);
+    
+    // Store selected plan in localStorage
+    const planData = {
+      id, 
+      name, 
+      price, 
+      dailyProfit: daily_profit, 
+      validityDays: validity_days, 
+      totalIncome: total_income
+    };
+    
+    localStorage.setItem('selectedPlan', JSON.stringify(planData));
+    console.log('Plan data stored:', planData);
 
-    console.log('Current user status:', isSignedIn ? 'Logged in' : 'Not logged in');
+    const currentUser = getCurrentUser();
+    console.log('Current user status:', currentUser ? 'Logged in' : 'Not logged in');
 
-    if (isSignedIn) {
+    if (currentUser) {
       // User is logged in, go directly to payment page
       console.log('Redirecting logged in user to payment page');
       navigate('/payment');

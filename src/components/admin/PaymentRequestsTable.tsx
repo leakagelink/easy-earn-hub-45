@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
-import { supabaseService } from '@/services/supabaseService';
+import { approvePaymentRequest, rejectPaymentRequest } from '@/services/appwriteService';
 import { CheckCircle, XCircle } from 'lucide-react';
 
 interface PaymentRequest {
@@ -41,12 +41,18 @@ const PaymentRequestsTable: React.FC<PaymentRequestsTableProps> = ({
 
   const handleApprove = async (requestId: string) => {
     try {
-      const result = await supabaseService.updatePaymentRequest(requestId, { 
-        status: 'approved',
-        approved_at: new Date().toISOString()
-      });
+      const { data, error } = await approvePaymentRequest(requestId);
 
-      if (result.success) {
+      if (error) {
+        toast({
+          title: "Approval Failed",
+          description: error.message || "Could not approve payment request",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data) {
         toast({
           title: "Payment Approved",
           description: "Payment request has been approved successfully.",
@@ -70,12 +76,18 @@ const PaymentRequestsTable: React.FC<PaymentRequestsTableProps> = ({
 
   const handleReject = async (requestId: string) => {
     try {
-      const result = await supabaseService.updatePaymentRequest(requestId, { 
-        status: 'rejected',
-        approved_at: new Date().toISOString()
-      });
+      const { data, error } = await rejectPaymentRequest(requestId);
 
-      if (result.success) {
+      if (error) {
+        toast({
+          title: "Rejection Failed",
+          description: error.message || "Could not reject payment request",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data) {
         toast({
           title: "Payment Rejected",
           description: "Payment request has been rejected.",

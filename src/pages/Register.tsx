@@ -1,22 +1,22 @@
 
 import React from 'react';
-import CleanAuthForm from '@/components/CleanAuthForm';
+import { useLocation } from 'react-router-dom';
+import AuthForm from '@/components/AuthForm';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
 const Register = () => {
+  const location = useLocation();
+  const query = new URLSearchParams(location.search);
+  const selectedPlan = query.get('plan');
+  
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       <Header />
       
-      <main className="pt-20 pb-8 px-4">
-        <div className="container mx-auto max-w-md">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">EasyEarn में शामिल हों</h1>
-            <p className="text-gray-600">अपना account बनाएं और आज ही earning शुरू करें</p>
-          </div>
-          
-          <CleanAuthForm mode="register" />
+      <main className="flex-grow container mx-auto px-4 py-8 mb-16 md:mb-0">
+        <div className="max-w-md mx-auto">
+          <AuthForm mode="register" selectedPlan={selectedPlan || undefined} />
         </div>
       </main>
       

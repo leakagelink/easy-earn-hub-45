@@ -1,10 +1,10 @@
 
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '@clerk/clerk-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { useAuth } from "@/contexts/auth";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import DashboardStats from "@/components/dashboard/DashboardStats";
 import DashboardActions from "@/components/dashboard/DashboardActions";
@@ -13,7 +13,7 @@ import InvestmentsTable from "@/components/dashboard/InvestmentsTable";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { isSignedIn, isLoaded, user } = useUser();
+  const { currentUser, loading } = useAuth();
   const {
     investments,
     transactions,
@@ -26,12 +26,12 @@ const Dashboard = () => {
   
   // Check if user is logged in
   useEffect(() => {
-    if (isLoaded && !isSignedIn) {
+    if (!loading && !currentUser) {
       navigate('/login');
     }
-  }, [isSignedIn, isLoaded, navigate]);
+  }, [currentUser, loading, navigate]);
 
-  if (!isLoaded || isLoading) {
+  if (loading || isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">Loading...</div>
@@ -45,7 +45,7 @@ const Dashboard = () => {
       
       <main className="flex-grow container mx-auto px-4 py-8">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">
-          Welcome, {user?.firstName || user?.emailAddresses[0]?.emailAddress}!
+          Dashboard
         </h1>
         
         <DashboardStats
