@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
@@ -6,6 +5,9 @@ import { registerUser, loginUser, resetPassword } from '@/utils/firebaseAuth';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
+import NetworkStatus from "@/components/NetworkStatus";
 
 interface SimpleAuthFormProps {
   mode: 'login' | 'register';
@@ -19,6 +21,7 @@ const SimpleAuthForm: React.FC<SimpleAuthFormProps> = ({ mode, selectedPlan }) =
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [networkError, setNetworkError] = useState<string | null>(null);
   
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -35,6 +38,7 @@ const SimpleAuthForm: React.FC<SimpleAuthFormProps> = ({ mode, selectedPlan }) =
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setNetworkError(null);
     
     // Validation
     if (!email || !validateEmail(email)) {
@@ -59,17 +63,22 @@ const SimpleAuthForm: React.FC<SimpleAuthFormProps> = ({ mode, selectedPlan }) =
     }
     
     setIsLoading(true);
+    console.log(`🚀 Starting ${mode} process for email:`, email);
     
     try {
       if (mode === 'login') {
+        console.log('📝 Attempting login...');
         await loginUser(email, password);
+        console.log('✅ Login successful');
         toast({ 
           title: "✅ Login successful!",
           description: "आपका login हो गया है"
         });
         navigate('/dashboard');
       } else {
+        console.log('📝 Attempting registration...');
         await registerUser(email, password, phone);
+        console.log('✅ Registration successful');
         toast({ 
           title: "✅ Registration successful!", 
           description: "Account बन गया है। अब login करें।" 
@@ -79,6 +88,19 @@ const SimpleAuthForm: React.FC<SimpleAuthFormProps> = ({ mode, selectedPlan }) =
         navigate('/login');
       }
     } catch (error: any) {
+      console.error(`❌ ${mode} failed:`, error);
+      
+      // Check for specific network errors
+      if (error.message.includes('network') || 
+          error.message.includes('NETWORK_REQUEST_FAILED') ||
+          error.code === 'auth/network-request-failed') {
+        setNetworkError('Network connection की समस्या है। Internet connection check करें और फिर try करें।');
+      } else if (error.message.includes('CORS') || error.message.includes('blocked')) {
+        setNetworkError('Browser security settings की वजह से error आ रहा है। Different browser या incognito mode में try करें।');
+      } else {
+        setNetworkError(null);
+      }
+      
       toast({
         title: mode === 'login' ? "❌ Login Failed" : "❌ Registration Failed",
         description: error.message,
@@ -119,6 +141,26 @@ const SimpleAuthForm: React.FC<SimpleAuthFormProps> = ({ mode, selectedPlan }) =
       <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
         {mode === 'login' ? 'अपने account में login करें' : 'नया account बनाएं'}
       </h2>
+      
+      <NetworkStatus />
+      
+      {networkError && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            {networkError}
+            <div className="mt-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => navigate('/debug')}
+              >
+                Debug Tools
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
       
       {selectedPlan && (
         <div className="mb-6 p-3 bg-easyearn-purple/10 rounded-md">

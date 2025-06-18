@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -22,6 +21,7 @@ import Invest from "./pages/Invest";
 import Admin from "./pages/Admin";
 import MaintenancePage from "./pages/MaintenancePage";
 import Payment from "./pages/Payment";
+import DebugPage from "./pages/DebugPage";
 
 // Admin pages
 import AdminUsers from "./pages/admin/AdminUsers";
@@ -71,6 +71,7 @@ const AppRoutes = () => {
         <Route path="/invest" element={<Invest />} />
         <Route path="/payment" element={<Payment />} />
         <Route path="/maintenance" element={<MaintenancePage />} />
+        <Route path="/debug" element={<DebugPage />} />
         
         {/* Admin routes */}
         <Route path="/admin" element={<Admin />} />
