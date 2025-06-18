@@ -95,11 +95,11 @@ const Profile = () => {
       if (currentUser?.id) {
         const { error } = await supabase
           .from('profiles')
-          .upsert({
-            id: currentUser.id,
+          .update({
             phone,
             updated_at: new Date().toISOString(),
-          });
+          })
+          .eq('id', currentUser.id);
         
         if (error) throw error;
       }

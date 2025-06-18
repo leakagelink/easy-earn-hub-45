@@ -11,7 +11,7 @@ export const supabaseService = {
     paymentMethod: string;
   }) {
     try {
-      const { data: result, error } = await supabase
+      const { data: result, error } = await (supabase as any)
         .from('transactions')
         .insert([{
           user_id: data.userId,
@@ -42,7 +42,7 @@ export const supabaseService = {
     planName: string;
   }) {
     try {
-      const { data: result, error } = await supabase
+      const { data: result, error } = await (supabase as any)
         .from('payment_requests')
         .insert([{
           user_id: data.userId,
@@ -67,7 +67,7 @@ export const supabaseService = {
 
   async updatePaymentRequest(requestId: string, updates: any) {
     try {
-      const { data: result, error } = await supabase
+      const { data: result, error } = await (supabase as any)
         .from('payment_requests')
         .update(updates)
         .eq('id', requestId)

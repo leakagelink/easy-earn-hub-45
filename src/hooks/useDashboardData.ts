@@ -30,8 +30,8 @@ export const useDashboardData = () => {
       try {
         setLoading(true);
         
-        // Fetch user investments
-        const { data: investmentsData, error: investmentsError } = await supabase
+        // Fetch user investments using type assertion
+        const { data: investmentsData, error: investmentsError } = await (supabase as any)
           .from('investments')
           .select('*')
           .eq('user_id', currentUser.id)
@@ -40,8 +40,8 @@ export const useDashboardData = () => {
         if (investmentsError) throw investmentsError;
         setInvestments(investmentsData || []);
 
-        // Fetch user transactions
-        const { data: transactionsData, error: transactionsError } = await supabase
+        // Fetch user transactions using type assertion
+        const { data: transactionsData, error: transactionsError } = await (supabase as any)
           .from('transactions')
           .select('*')
           .eq('user_id', currentUser.id)

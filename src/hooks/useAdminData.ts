@@ -35,8 +35,8 @@ export const useAdminData = () => {
         if (usersError) throw usersError;
         setUsers(usersData || []);
 
-        // Fetch investments
-        const { data: investmentsData, error: investmentsError } = await supabase
+        // Fetch investments using type assertion
+        const { data: investmentsData, error: investmentsError } = await (supabase as any)
           .from('investments')
           .select('*')
           .order('created_at', { ascending: false });
@@ -44,8 +44,8 @@ export const useAdminData = () => {
         if (investmentsError) throw investmentsError;
         setInvestments(investmentsData || []);
 
-        // Fetch transactions
-        const { data: transactionsData, error: transactionsError } = await supabase
+        // Fetch transactions using type assertion
+        const { data: transactionsData, error: transactionsError } = await (supabase as any)
           .from('transactions')
           .select('*')
           .order('created_at', { ascending: false });
@@ -53,8 +53,8 @@ export const useAdminData = () => {
         if (transactionsError) throw transactionsError;
         setTransactions(transactionsData || []);
 
-        // Fetch withdrawals
-        const { data: withdrawalsData, error: withdrawalsError } = await supabase
+        // Fetch withdrawals using type assertion
+        const { data: withdrawalsData, error: withdrawalsError } = await (supabase as any)
           .from('withdrawals')
           .select('*')
           .order('created_at', { ascending: false });
@@ -62,8 +62,8 @@ export const useAdminData = () => {
         if (withdrawalsError) throw withdrawalsError;
         setWithdrawals(withdrawalsData || []);
 
-        // Fetch payment requests
-        const { data: paymentRequestsData, error: paymentRequestsError } = await supabase
+        // Fetch payment requests using type assertion
+        const { data: paymentRequestsData, error: paymentRequestsError } = await (supabase as any)
           .from('payment_requests')
           .select('*')
           .order('created_at', { ascending: false });
